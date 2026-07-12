@@ -1,0 +1,41 @@
+import { prisma } from "@/lib/prisma";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+
+export default async function PromotoresPage() {
+    const promoters = await prisma.promoter.findMany({
+        include: { supervisor: true },
+        orderBy: { name: "asc" },
+    });
+
+    return (
+        <div className="space-y-6">
+            <div className="flex items-center justify-between">
+                <h1 className="text-2xl font-bold">Promotores</h1>
+            </div>
+
+            <Table>
+                <TableHeader>
+                    <TableRow>
+                        <TableHead>Nome</TableHead>
+                        <TableHead>Cidade</TableHead>
+                        <TableHead>UF</TableHead>
+                        <TableHead>Supervisor</TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    {promoters.map((p) => (
+                        <TableRow key={p.id}>
+                            <TableCell className="font-medium">{p.name}</TableCell>
+                            <TableCell>{p.city ?? "-"}</TableCell>
+                            <TableCell>
+                                {p.state ? <Badge variant="outline">{p.state}</Badge> : "-"}
+                            </TableCell>
+                            <TableCell>{p.supervisor.name}</TableCell>
+                        </TableRow>
+                    ))}
+                </TableBody>
+            </Table>
+        </div>
+    );
+}

@@ -45,6 +45,8 @@ model Promoter {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  visits Visit[]
 }
 
 model Industry {
@@ -54,6 +56,8 @@ model Industry {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  visits Visit[]
 }
 
 model Store {
@@ -71,4 +75,27 @@ model Store {
   createdAt DateTime @default(now())
 
   updatedAt DateTime @updatedAt
+
+  visits Visit[]
+}
+
+enum VisitStatus {
+  PLANEJADA
+  REALIZADA
+  CANCELADA
+}
+
+model Visit {
+  id         String      @id @default(cuid())
+  promoterId String
+  promoter   Promoter    @relation(fields: [promoterId], references: [id])
+  storeId    String
+  store      Store       @relation(fields: [storeId], references: [id])
+  industryId String
+  industry   Industry    @relation(fields: [industryId], references: [id])
+  status     VisitStatus @default(PLANEJADA)
+  scheduledDate DateTime
+  completedDate DateTime?
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
 }
