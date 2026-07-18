@@ -1,4 +1,4 @@
-"use client";
+'use client';
 import { useState } from 'react';
 
 interface Props {
@@ -14,21 +14,30 @@ export default function ImportCard({ onSuccess }: Props = {}) {
 
   const handleDragOver = (e: DragEvent) => {
     e.preventDefault();
-    e.currentTarget.classList.add('dragover');
+    if (e.currentTarget) {
+      (e.currentTarget as HTMLElement).classList.add('dragover');
+    }
   };
 
   const handleDragLeave = (e: DragEvent) => {
     e.preventDefault();
-    e.currentTarget.classList.remove('dragover');
+    if (e.currentTarget) {
+      (e.currentTarget as HTMLElement).classList.remove('dragover');
+    }
   };
 
   const handleDrop = async (e: DragEvent) => {
     e.preventDefault();
-    e.currentTarget.classList.remove('dragover');
+    if (e.currentTarget) {
+      (e.currentTarget as HTMLElement).classList.remove('dragover');
+    }
 
-    const files = e.dataTransfer.files;
-    if (files.length === 0) return;
-    const file = files[0];
+    // Check if dataTransfer exists and has files
+    if (!e.dataTransfer || !e.dataTransfer.files || e.dataTransfer.files.length === 0) {
+      return;
+    }
+
+    const file = e.dataTransfer.files[0];
     await handleFile(file);
   };
 
@@ -101,7 +110,7 @@ export default function ImportCard({ onSuccess }: Props = {}) {
         className="hidden"
         onChange={handleFileChange}
       />
-      <div onClick={() => document.querySelector('input[type="file"]')?.click()}>
+      <div onClick={() => (document.querySelector('input[type=\"file\"]') as HTMLInputElement | null)?.click()}>
         {loading ? (
           <div className="flex flex-col items-center space-y-4">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>

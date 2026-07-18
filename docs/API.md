@@ -99,6 +99,33 @@ Delete a visit (only if in PLANEJADA status).
 
 **Response:** Success confirmation.
 
+### Imports
+#### POST `/api/imports/upload`
+Upload and initiate processing of import file.
+
+**Request:** Multipart/form-data with file
+
+**Response:** Import preview or error
+
+#### POST `/api/imports/preview`
+Generate preview of import file without persistence.
+
+**Request:** File metadata and configuration
+
+**Response:** Preview data with validation results
+
+#### POST `/api/imports/confirm`
+Confirm and persist import data.
+
+**Request:** Import configuration and validated data
+
+**Response:** Import confirmation
+
+#### GET `/api/imports/history`
+Retrieve import history with filtering and pagination.
+
+**Response:** List of import operations
+
 ## Planned Endpoints
 The following endpoints are planned for future implementation:
 
@@ -122,18 +149,6 @@ The following endpoints are planned for future implementation:
 - GET `/api/industries/[id]`
 - PUT `/api/industries/[id]`
 - DELETE `/api/industries/[id]`
-
-### Imports
-- GET `/api/imports`
-- POST `/api/imports`
-- GET `/api/imports/[id]`
-- DELETE `/api/imports/[id]`
-
-### Import Files
-- GET `/api/imports/[importId]/files`
-- POST `/api/imports/[importId]/files`
-- GET `/api/imports/[importId]/files/[fileId]`
-- DELETE `/api/imports/[importId]/files/[fileId]`
 
 ## Error Responses
 All endpoints return appropriate HTTP status codes:

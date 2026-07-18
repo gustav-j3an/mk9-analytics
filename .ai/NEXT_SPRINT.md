@@ -1,43 +1,62 @@
 # Next Sprint - MK9 Analytics
 
 ## Sprint Overview
-- **Sprint**: 2
+- **Sprint**: 3
 - **Duration**: July 25, 2026 - August 8, 2026
-- **Goal**: Implement authentication system and import processing backend
+- **Goal**: Operation Engine implementation
 
 ## Planned Tasks
-- [ ] Implement authentication system (login, logout, session management)
-- [ ] Create authentication middleware for route protection
-- [ ] Implement file parsing for Excel and CSV files
-- [ ] Implement data validation for import data
-- [ ] Implement persistence layer for imported data
-- [ ] Complete CRUD operations for Operation entity
-- [ ] Complete CRUD operations for Store entity
-- [ ] Complete CRUD operations for Industry entity
-- [ ] Set up testing framework (Jest and React Testing Library)
-- [ ] Write unit tests for authentication service
-- [ ] Write unit tests for import parsing service
-- [ ] Begin integration with n8n for workflow automation
-- [ ] Create API routes for operations, stores, and industries
-- [ ] Implement error handling and validation for new API routes
-- [ ] Update documentation for new features
+- [ ] Operation Engine implementation (Sprint 3 — Operation Engine)
+- [ ] Authentication system implementation
+- [ ] Completing CRUD operations for core entities (operations, stores, industries)
+- [ ] Setting up testing framework and writing initial tests
+- [ ] Beginning integration with external services (starting with n8n workflows)
 
-## Impediments
-- None anticipated at this time
+## Sprint Goals
+### Operation Engine
+- Create Operation service for CRUD operations
+- Implement operation duplication functionality
+- Add operation lifecycle management (open, close, archive, reopen)
+- Create operation planner for generating monthly operations
+- Implement visit generator service
+- Build operational calendar view
+- Develop operation dashboard with statistics
+- Create REST API endpoints for operations
+- Build operation management UI (list, create, edit, details, calendar)
 
-## Dependencies
-- Completion of Sprint 1 tasks
-- Availability of team members for implementation and testing
+### Authentication System
+- Implement JWT-based authentication
+- Add role-based access control (Admin/Supervisor)
+- Create login/logout pages
+- Protect API routes and dashboard pages
+- Add user registration and password reset
 
-## Success Criteria
-- Users can log in and log out of the system
-- Protected routes are inaccessible without authentication
-- Users can upload Excel and CSV files for import
-- Imported data is validated against business rules
-- Valid import data is persisted to the database
-- CRUD operations for operations, stores, and industries are functional
-- Unit tests pass for new functionality
-- Basic n8n workflow integration is functional
+### Core Entities CRUD
+- Complete CRUD operations for operations, stores, industries
+- Implement proper validation with Zod schemas
+- Add relationship management between entities
+- Create corresponding API endpoints
+- Build management UI for each entity
+
+### Testing Framework
+- Set up Jest and React Testing Library
+- Write unit tests for services and utilities
+- Create integration tests for API endpoints
+- Add end-to-end tests for critical user flows
+- Implement test coverage reporting
+
+### External Services Integration
+- Begin n8n workflow integration for automated processes
+- Set up webhook endpoints for external triggers
+- Create basic Google Drive synchronization placeholder
+- Prepare WhatsApp Business API integration foundation
+
+## Definition of Done
+- All planned features implemented and tested
+- TypeScript compilation without errors
+- ESLint and Prettier checks pass
+- Documentation updated
+- Sprint review completed and approved
 
 -- 
-*Last updated: July 16, 2026*
+*Last updated: July 17, 2026*

@@ -30,6 +30,7 @@ A comprehensive web application for operational management of Trade Marketing, d
 ## Future Vision
 
 MK9 Analytics will evolve into an intelligent platform that not only records activities but anticipates needs:
+
 - Machine learning to suggest optimized promoter routes based on historical sales and traffic patterns
 - Prediction of which stores are most likely to adhere to promotions for proactive resource allocation
 - Automated personalized communication via WhatsApp based on visit outcomes and store profiles
@@ -39,6 +40,7 @@ MK9 Analytics will evolve into an intelligent platform that not only records act
 ## Technologies
 
 ### Frontend
+
 - **Next.js 16** - React framework with hybrid rendering (SSR, SSG, ISR) and API routes
 - **React 19** - Declarative UI library with concurrent rendering capabilities
 - **TypeScript** - Typed superset of JavaScript for compile-time safety and enhanced IDE support
@@ -46,6 +48,7 @@ MK9 Analytics will evolve into an intelligent platform that not only records act
 - **Shadcn/UI** - Reusable, accessible component primitives built on Radix UI and Tailwind
 
 ### Backend & Infrastructure
+
 - **Prisma 6** - TypeScript ORM for type-safe database access with migration system
 - **PostgreSQL** - Robust, extensible open-source relational database
 - **Docker** - Containerization platform for environment consistency
@@ -53,6 +56,7 @@ MK9 Analytics will evolve into an intelligent platform that not only records act
 - **n8n** - Open-source workflow automation tool for external service integrations
 
 ### Integrations
+
 - **Google Drive API** - For synchronizing promotional materials and instruction spreadsheets
 - **Google Sheets API** - Alternative data source and export destination for non-technical users
 - **WhatsApp Cloud API** - Planned integration for automated field communication
@@ -178,20 +182,20 @@ mk9-analytics/
 │       │
 │       ├── imports/              # Spreadsheet import module (in development)
 │       │   ├── components/       # Import UI components (upload, preview)
-│   │   ├── hooks/                # Import-related React hooks
-│   │   ├── pages/                # Import-related Next.js pages
-│   │   ├── repositories/         # Import and ImportFile repository implementations
-│   │   ├── services/             # Import processing service
-│   │   ├── schemas/              # Zod validation schemas for import data
-│   │   ├── types/                # Import domain TypeScript types
-│   │   └── utils/                # Excel/CSV parsing utilities
-│   │
+│       │   ├── hooks/            # Import-related React hooks
+│       │   ├── pages/            # Import-related Next.js pages
+│       │   ├── repositories/     # Import and ImportFile repository implementations
+│       │   ├── services/         # Import processing service
+│       │   ├── schemas/          # Zod validation schemas for import data
+│       │   ├── types/            # Import domain TypeScript types
+│       │   └── utils/            # Excel/CSV parsing utilities
+│       │
 │       ├── shared/               # Cross-module shared code
-│   │   ├── components/           # UI components used across multiple modules
-│   │   ├── hooks/                # Shared React hooks (e.g., useAuth, useQuery)
-│   │   ├── types/                # Global TypeScript types
-│   │   ├── utils/                # Generic utility functions
-│   │   └── ...                   # Other shared resources
+│       │   ├── components/       # UI components used across multiple modules
+│       │   ├── hooks/            # Shared React hooks (e.g., useAuth, useQuery)
+│       │   ├── types/            # Global TypeScript types
+│       │   ├── utils/            # Generic utility functions
+│       │   └── ...               # Other shared resources
 │       │
 │       └── ...                   # Additional modules in planning (operations, analytics, etc.)
 │
@@ -409,16 +413,16 @@ Contains code used across multiple modules:
 The dashboard provides operational visibility through multiple interconnected views:
 
 ### Main Dashboard (`/dashboard`)
-- **Key Metrics Cards**: 
+- **Key Metrics Cards**:
   - Total scheduled visits
   - Completed visits (with percentage)
   - Canceled visits (with percentage)
   - Compliance rate (completed vs. scheduled)
-- **Visits Trend Chart**: 
+- **Visits Trend Chart**:
   - Line chart showing daily visit completion rates over the current operation period
   - Toggle between linear and logarithmic scales
   - Hover tooltips showing exact values
-- **Recent Activity Feed**: 
+- **Recent Activity Feed**:
   - Chronological list of recent visit updates (status changes, completions)
   - Color-coded by status (green for completed, yellow for planned, red for canceled)
 - **Quick Actions**:
@@ -457,7 +461,7 @@ The dashboard provides operational visibility through multiple interconnected vi
   - Status filter (defaults to showing only planned visits)
 
 ### Analytics Views (Planned)
-- **Performance Trends**: 
+- **Performance Trends**:
   - Month-over-month comparison of key metrics
   - Seasonal pattern identification
   - Correlation between visit timing and promotional effectiveness
@@ -509,7 +513,7 @@ The import module handles the complete lifecycle of spreadsheet data ingestion:
 
 ### 3. Validation
 - **Schema Validation**:
-  - Zod-defined schemas for expected import formats
+  - Zod-defined schemas for expected import formats (IN PROGRESS)
   - Field-level validation (required fields, data types, format constraints)
   - Cross-field validation (e.g., date ranges, logical consistency)
 - **Business Rule Validation**:
@@ -624,7 +628,24 @@ The import module handles the complete lifecycle of spreadsheet data ingestion:
   - Description: Delete a visit (only if in PLANEJADA status)
   - Response: Success confirmation
 
-*(Additional API routes for operations, stores, industries, imports, etc. are planned for future implementation)*
+### Import (In Progress)
+- **POST** `/api/imports/upload`
+  - Description: Upload and initiate processing of import file
+  - Request: Multipart/form-data with file
+  - Response: Import preview or error
+- **POST** `/api/imports/preview`
+  - Description: Generate preview of import file without persistence
+  - Request: File metadata and configuration
+  - Response: Preview data with validation results
+- **POST** `/api/imports/confirm`
+  - Description: Confirm and persist import data
+  - Request: Import configuration and validated data
+  - Response: Import confirmation
+- **GET** `/api/imports/history`
+  - Description: Retrieve import history with filtering and pagination
+  - Response: List of import operations
+
+*(Additional API routes for operations, stores, industries, etc. are planned for future implementation)*
 
 ## Environment Variables
 
@@ -632,7 +653,7 @@ Required configuration variables for different environments:
 
 ### Core Application
 - `DATABASE_URL`: PostgreSQL connection string (required)
-  - Format: `postgresql://USER:PASSWORD@HOST:PORT/DATABASE?schema=public`
+  - Format: `postgresql://USER:***@HOST:PORT/DATABASE?schema=public`
 - `NEXTAUTH_SECRET`: Secret for encrypting NextAuth tokens (required in production)
 - `NEXTAUTH_URL`: Base URL of the application (required for authentication)
 - `NODE_ENV`: Environment mode (`development`, `production`, `test`)
@@ -936,11 +957,11 @@ Defined in `package.json`:
 - Seed data for initial testing
 - Basic API routes for promoters and visits
 
-### Sprint 2: Import Module (Current Sprint 🟡)
+### Sprint 2: Import Module (Completed ✅)
 - File upload interface with drag-and-drop
 - Excel and CSV parsing using `xlsx` and `papaparse`
 - Data preview with interactive grid
-- Zod-based schema validation
+- Zod-based schema validation (in progress)
 - Duplicate detection using file hashes
 - Error reporting and correction interface
 - Database transaction processing
@@ -1002,7 +1023,7 @@ Defined in `package.json`:
 
 ## Project Status
 
-### Overall Completion: 25%
+### Overall Completion: 30%
 
 ### Component Status
 
@@ -1011,12 +1032,12 @@ Defined in `package.json`:
 | Infrastructure | ✅ Complete | 100% | Docker-compose, PostgreSQL, n8n configured |
 | Database Schema | ✅ Complete | 100% | Core models defined and migrated |
 | Authentication System | 🟡 Partial | 60% | Basic session setup, needs role-based protection |
-| Import Module | 🟡 In Progress | 40% | Upload and parsing implemented, validation pending |
+| Import Module | 🟡 In Progress | 60% | Upload and parsing implemented, validation/persistence in progress |
 | Dashboard Core | 🟡 Partial | 50% | Basic layout and components, data integration needed |
-| API Endpoints | 🟡 Partial | 30% | Promoters and visits routes implemented |
+| API Endpoints | 🟡 Partial | 40% | Promoters, visits, and import routes implemented |
 | UI Components | ✅ Complete | 80% | Reusable component library established |
 | Testing | ❌ Not Started | 0% | No test suite implemented |
-| Documentation | 🟡 In Progress | 30% | This document and technical specs underway |
+| Documentation | 🟡 In Progress | 40% | This document and technical specs underway |
 | Performance Optimization | ❌ Not Started | 0% | No optimization efforts yet |
 | Security Hardening | ❌ Not Started | 0% | Beyond basic setup, needs review |
 
@@ -1031,6 +1052,10 @@ Defined in `package.json`:
 8. **Error Logging**: Client-side errors not captured and reported
 9. **State Management**: Overuse of prop drilling in some components
 10. **Bundle Analysis**: No bundle size optimization or code splitting implemented
+11. **Import Persistence**: Import service does not yet persist data to database (stubbed)
+12. **Validation Schemas**: Zod schemas for import formats are incomplete
+13. **Duplicate Detection**: Import service lacks robust duplicate detection beyond file hash
+14. **History Logging**: ImportService does not fully populate ImportFile and SyncLog records
 
 ### Dependencies Status
 - **Core Dependencies**: ✅ All installed and compatible
@@ -1040,12 +1065,13 @@ Defined in `package.json`:
 
 ## Next Steps
 
-### Immediate Priorities (Current Sprint)
+### Immediate Priorities (Current Sprint - Sprint 2)
 1. Complete Zod validation schemas for import formats
 2. Implement error handling and user feedback in import flow
 3. Add import history tracking and retry mechanism
 4. Connect import service to dashboard for real-time updates
-5. Create unit tests for import validation and parsing logic
+5. Implement actual persistence layer for import data
+6. Complete duplicate detection and history logging
 
 ### Short-Term Goals (Next 2 Sprints)
 1. Implement role-based access control for API routes and pages
@@ -1055,6 +1081,7 @@ Defined in `package.json`:
 5. Implement proper error boundaries and loading states
 6. Conduct accessibility audit and fix issues
 7. Optimize bundle size and implement code splitting
+8. Begin integration with external services (starting with n8n workflows)
 
 ### Long-Term Vision
 1. Deploy to staging environment with production-like configuration
@@ -1064,3 +1091,6 @@ Defined in `package.json`:
 5. Integrate with major ERP and CRM systems
 6. Implement machine learning models for predictive analytics
 7. Achieve SOC 2 Type II compliance for enterprise adoption
+
+---
+*Last updated: July 17, 2026*
