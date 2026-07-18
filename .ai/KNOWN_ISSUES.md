@@ -98,5 +98,10 @@ Please report new issues through the project's issue tracking system (e.g., GitH
 - Screenshots or logs if applicable
 - Any relevant context (browser, device, etc.)
 
+CSV source row tracking:
+Linhas vazias intermediárias são removidas antes da normalização, podendo deslocar a numeração física dos registros posteriores.
+Impacto: somente mensagens de erro em CSVs com linhas vazias.
+Prioridade: baixa.
+
 -- 
-*Last updated: July 16, 2026*
+*Last updated: July 18, 2026*
