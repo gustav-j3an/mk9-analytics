@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { operationService } from '@/modules/operations/services/OperationService';
 
-export async function GET(request: NextRequest) {
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
-    const { searchParams } = new URL(request.url);
-    const id = searchParams.get('id');
+    const { id } = await params;
     
     if (!id) {
       return NextResponse.json(
@@ -24,11 +26,14 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function POST(request: NextRequest) {
+export async function POST(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
     const { searchParams } = new URL(request.url);
     const action = searchParams.get('action');
-    const id = searchParams.get('id');
+    const { id } = await params;
 
     if (!id) {
       return NextResponse.json(
