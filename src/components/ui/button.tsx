@@ -1,36 +1,29 @@
-import { Button as ButtonPrimitive } from "@base-ui/react/button"
-import { cva, type VariantProps } from "class-variance-authority"
+import React from 'react';
+import { Loader2 } from 'lucide-react';
+import { cva, type VariantProps } from 'class-variance-authority';
+import { cn } from '@/lib/utils';
 
-import { cn } from "@/lib/utils"
-
-const buttonVariants = cva(
-  "group/button inline-flex shrink-0 items-center justify-center rounded-md border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+export const buttonVariants = cva(
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-xs font-semibold tracking-tight transition-all duration-200 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-40 [&_svg]:pointer-events-none [&_svg]:size-3.5 [&_svg]:shrink-0 active:scale-[0.98]",
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/80",
-        outline:
-          "border-border bg-background shadow-xs hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50",
-        secondary:
-          "bg-secondary text-secondary-foreground hover:bg-[color-mix(in_oklch,var(--secondary),var(--foreground)_5%)] aria-expanded:bg-secondary aria-expanded:text-secondary-foreground",
-        ghost:
-          "hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-muted/50",
+        default:
+          "bg-[#09090B] hover:bg-[#1F1F23] text-white shadow-[0_1px_2px_rgba(0,0,0,0.08),_0_0_0_1px_rgba(9,9,11,0.05)] border border-[#09090B]",
         destructive:
-          "bg-destructive/10 text-destructive hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:focus-visible:ring-destructive/40",
-        link: "text-primary underline-offset-4 hover:underline",
+          "bg-[#EF4444] hover:bg-[#DC2626] text-white shadow-[0_1px_2px_rgba(0,0,0,0.05)] border border-[#EF4444]",
+        outline:
+          "border border-[#E4E4E7] bg-white text-[#18181B] shadow-[0_1px_2px_rgba(0,0,0,0.02)] hover:bg-[#FAFAFA] hover:border-[#D4D4D8]",
+        secondary:
+          "bg-[#F4F4F5] hover:bg-[#E4E4E7] text-[#18181B] border border-transparent",
+        ghost: "text-[#71717A] hover:bg-[#F4F4F5] hover:text-[#09090B]",
+        link: "text-[#09090B] underline-offset-4 hover:underline",
       },
       size: {
-        default:
-          "h-9 gap-1.5 px-2.5 in-data-[slot=button-group]:rounded-md has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2",
-        xs: "h-6 gap-1 rounded-[min(var(--radius-md),8px)] px-2 text-xs in-data-[slot=button-group]:rounded-md has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3",
-        sm: "h-8 gap-1 rounded-[min(var(--radius-md),10px)] px-2.5 in-data-[slot=button-group]:rounded-md has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5",
-        lg: "h-10 gap-1.5 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2",
-        icon: "size-9",
-        "icon-xs":
-          "size-6 rounded-[min(var(--radius-md),8px)] in-data-[slot=button-group]:rounded-md [&_svg:not([class*='size-'])]:size-3",
-        "icon-sm":
-          "size-8 rounded-[min(var(--radius-md),10px)] in-data-[slot=button-group]:rounded-md",
-        "icon-lg": "size-10",
+        default: "h-9 px-4 py-2",
+        sm: "h-8 rounded-lg px-3 text-[11px]",
+        lg: "h-10 rounded-xl px-5 text-sm",
+        icon: "h-9 w-9",
       },
     },
     defaultVariants: {
@@ -38,21 +31,39 @@ const buttonVariants = cva(
       size: "default",
     },
   }
-)
+);
 
-function Button({
-  className,
-  variant = "default",
-  size = "default",
-  ...props
-}: ButtonPrimitive.Props & VariantProps<typeof buttonVariants>) {
-  return (
-    <ButtonPrimitive
-      data-slot="button"
-      className={cn(buttonVariants({ variant, size, className }))}
-      {...props}
-    />
-  )
+export interface ButtonProps
+  extends React.ButtonHTMLAttributes<HTMLButtonElement>,
+    VariantProps<typeof buttonVariants> {
+  variant?: 'primary' | 'secondary' | 'outline' | 'danger' | 'ghost' | 'default' | 'destructive' | 'link' | any;
+  size?: 'sm' | 'md' | 'lg' | 'default' | 'icon' | any;
+  loading?: boolean;
 }
 
-export { Button, buttonVariants }
+export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
+  ({ children, variant = 'default', size = 'default', loading = false, className = '', disabled, ...props }, ref) => {
+    // Map new visual design variant names to standard classes
+    let finalVariant = variant;
+    if (variant === 'primary') finalVariant = 'default';
+    if (variant === 'danger') finalVariant = 'destructive';
+
+    let finalSize = size;
+    if (size === 'md') finalSize = 'default';
+
+    return (
+      <button
+        ref={ref}
+        className={cn(buttonVariants({ variant: finalVariant as any, size: finalSize as any, className }))}
+        disabled={disabled || loading}
+        {...props}
+      >
+        {loading && <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin opacity-70" />}
+        {children}
+      </button>
+    );
+  }
+);
+
+Button.displayName = 'Button';
+export default Button;
