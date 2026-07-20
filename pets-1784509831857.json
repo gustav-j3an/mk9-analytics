@@ -1,0 +1,14 @@
+[
+  {
+    "color": "brown",
+    "type": "panda",
+    "size": "nano",
+    "name": "Hana"
+  },
+  {
+    "color": "red",
+    "type": "fox",
+    "size": "nano",
+    "name": "Rosy"
+  }
+]

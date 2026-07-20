@@ -7,11 +7,6 @@ const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 export const metadata: Metadata = {
     title: "MK9 Analytics",
     description: "Sistema de gestão operacional MK9",
-    icons: {
-        icon: "/favicon.ico",
-        shortcut: "/favicon.ico",
-        apple: "/favicon.ico",
-    },
 };
 
 export default function RootLayout({
