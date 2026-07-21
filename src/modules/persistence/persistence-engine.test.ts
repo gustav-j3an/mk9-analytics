@@ -113,6 +113,14 @@ const createPrismaMock = (db: MockDatabase) => {
       },
     },
     supervisor: {
+      findMany: async (args: any) => {
+        if (args?.where?.name?.in) return db.supervisors.filter((s) => args.where.name.in.includes(s.name));
+        return db.supervisors;
+      },
+      createMany: async (args: any) => {
+        for (const data of args.data) db.supervisors.push({ id: `sup-${db.supervisors.length + 1}`, ...data });
+        return { count: args.data.length };
+      },
       create: async (args: any) => {
         const s = { id: `sup-${db.supervisors.length + 1}`, ...args.data };
         db.supervisors.push(s);
@@ -206,9 +214,10 @@ test('operação totalmente nova', async () => {
 
   assert.equal(result.createdStores, 1);
   assert.equal(result.createdVisits, 1);
+  assert.equal(result.createdPromoters, 1);
   assert.equal(db.stores.length, 1);
   assert.equal(db.visits.length, 1);
-  assert.equal(db.supervisors.length, 1);
+  assert.equal(db.supervisors.length, 2);
 });
 
 test('rollback em erro', async () => {
@@ -260,5 +269,5 @@ test('estatísticas e atomicidade', async () => {
   assert.equal(result.updatedPromoters, 1);
   assert.equal(result.createdVisits, 1);
 
-  assert.equal(db.stores.find((s) => s.code === 'S1').name, 'STORE S1');
+  assert.equal(db.stores.find((s) => s.code === 'S1').name, 'Store S1');
 });

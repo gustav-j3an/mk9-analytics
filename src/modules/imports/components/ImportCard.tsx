@@ -4,6 +4,9 @@ import { useState } from 'react';
 import { PreviewTable } from './PreviewTable';
 import type { ImportPreview } from '../types/ImportPreview';
 import { UploadCloud, CheckCircle2, AlertCircle } from 'lucide-react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import type { ImportConfirmationErrorResponse, ImportConfirmationResponse } from '../types/ImportConfirmation';
 
 interface Props {
   /** Optional callback when upload succeeds */
@@ -11,10 +14,13 @@ interface Props {
 }
 
 export default function ImportCard({ onSuccess }: Props = {}) {
+  const router = useRouter();
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [preview, setPreview] = useState<ImportPreview | null>(null);
+  const [confirming, setConfirming] = useState(false);
+  const [confirmation, setConfirmation] = useState<ImportConfirmationResponse | null>(null);
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -58,6 +64,7 @@ export default function ImportCard({ onSuccess }: Props = {}) {
     setLoading(true);
     setError(null);
     setPreview(null);
+    setConfirmation(null);
 
     try {
       const base64 = await new Promise<string>((resolve, reject) => {
@@ -102,9 +109,35 @@ export default function ImportCard({ onSuccess }: Props = {}) {
     setFile(null);
     setPreview(null);
     setError(null);
+    setConfirmation(null);
+  };
+
+  const handleConfirm = async () => {
+    if (!preview?.previewToken || confirming || confirmation) return;
+    setConfirming(true);
+    setError(null);
+    try {
+      const response = await fetch('/api/imports/confirm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ previewToken: preview.previewToken, idempotencyKey: crypto.randomUUID() }),
+      });
+      const result = await response.json() as ImportConfirmationResponse | ImportConfirmationErrorResponse;
+      if (!response.ok || !result.success) {
+        throw new Error(result.success ? 'Não foi possível confirmar a importação.' : result.error);
+      }
+      setConfirmation(result);
+      router.refresh();
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Não foi possível confirmar a importação.');
+    } finally {
+      setConfirming(false);
+    }
   };
 
   if (preview) {
+    const expired = new Date(preview.expiresAt).getTime() <= Date.now();
+    const persistence = confirmation?.persistence;
     return (
       <div className="space-y-6">
         <div className="min-w-0 rounded-xl border border-[#F4F4F5] p-4 bg-[#FAFAFA]">
@@ -123,10 +156,36 @@ export default function ImportCard({ onSuccess }: Props = {}) {
               Remover
             </button>
           </div>
-          <p className="mb-4 text-xs font-semibold text-[#3F3F46]">
-            Total de visitas detectadas no arquivo: {preview.totalVisitsDetected}
-          </p>
+          <div className="mb-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
+            {[
+              ['Arquivo', preview.file.name],
+              ['Linhas', preview.totalRows],
+              ['Válidas', preview.validRows],
+              ['Inválidas', preview.invalidRows],
+              ['Visitas', preview.totalVisitsDetected],
+              ['Dias analisados', preview.dateColumnCount],
+              ['Lojas com visitas', preview.rowsWithVisits],
+            ].map(([label, value]) => <div key={label} className="rounded-lg border border-[#E4E4E7] bg-white p-3"><p className="text-[10px] font-semibold uppercase tracking-wide text-[#71717A]">{label}</p><p className="mt-1 truncate text-sm font-bold text-[#18181B]" title={String(value)}>{value}</p></div>)}
+          </div>
           <PreviewTable columns={preview.columns} data={preview.sample} />
+          <div className="mt-5 rounded-xl border border-[#E4E4E7] bg-white p-4">
+            {confirmation ? <div className="space-y-3">
+              <div className="flex items-center gap-2 text-sm font-semibold text-green-800"><CheckCircle2 className="h-4 w-4" />Importação confirmada com sucesso.</div>
+              {persistence && <div className="grid gap-2 text-xs sm:grid-cols-2 lg:grid-cols-4">
+                <span>Lojas: {persistence.createdStores} criadas, {persistence.updatedStores} atualizadas</span>
+                <span>Indústrias: {persistence.createdIndustries} criadas, {persistence.updatedIndustries} atualizadas</span>
+                <span>Promotores: {persistence.createdPromoters} criados, {persistence.updatedPromoters} atualizados</span>
+                <span>Visitas: {persistence.createdVisits} criadas, {persistence.updatedVisits} atualizadas</span>
+                <span>Duplicidades ignoradas: {persistence.ignoredDuplicates}</span>
+                <span>Linhas inválidas ignoradas: {persistence.ignoredInvalidRows}</span>
+              </div>}
+              <Link href="/dashboard" className="inline-flex rounded-md bg-[#20201F] px-3 py-2 text-xs font-semibold text-white">Ver dashboard</Link>
+            </div> : <div className="flex flex-wrap items-center justify-between gap-3">
+              <p className="text-xs text-[#52525B]">Serão persistidas somente {preview.validRows} linhas válidas e únicas.</p>
+              <button type="button" onClick={handleConfirm} disabled={!preview.previewToken || expired || preview.validRows === 0 || confirming} className="rounded-md bg-green-700 px-4 py-2 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">{confirming ? 'Confirmando...' : expired ? 'Preview expirado' : 'Confirmar importação'}</button>
+            </div>}
+            {error && <p className="mt-3 text-xs font-semibold text-red-700">{error}</p>}
+          </div>
         </div>
 
         <div className="cursor-pointer rounded-xl border border-dashed border-[#E4E4E7] p-6 text-center hover:border-[#A1A1AA] transition-colors"

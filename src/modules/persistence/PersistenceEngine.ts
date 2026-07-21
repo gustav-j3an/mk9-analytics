@@ -1,8 +1,7 @@
 import { prisma as defaultPrisma } from '@/lib/prisma';
-import type { PrismaClient } from '@prisma/client';
+import type { Prisma, PrismaClient } from '@prisma/client';
 import type { PersistencePlan } from './PersistencePlan';
 import type { PersistenceResult } from './PersistenceResult';
-import { groupExistingVisits } from './utils/groupExistingVisits';
 
 export class PersistenceEngine {
   static async persist(
@@ -12,7 +11,7 @@ export class PersistenceEngine {
   ): Promise<PersistenceResult> {
     const startTime = Date.now();
 
-    return await prisma.$transaction(async (tx) => {
+    const persistInTransaction = async (tx: Prisma.TransactionClient) => {
       // 1. Persistir Lojas
       for (const store of plan.storesToCreate) {
         await tx.store.create({
@@ -170,6 +169,7 @@ export class PersistenceEngine {
 
       // Carregar/criar promotor padrão uma única vez se houver visitas sem promotor
       let defaultPromoterId = '';
+      let createdDefaultPromoters = 0;
       const hasVisitsWithoutPromoter =
         plan.visitsToCreate.some((v) => !v.promoter) || plan.visitsToUpdate.some((v) => !v.promoter);
 
@@ -185,6 +185,7 @@ export class PersistenceEngine {
               supervisorId: defaultSupId,
             },
           });
+          createdDefaultPromoters = 1;
         }
         defaultPromoterId = defaultPromoter.id;
       }
@@ -205,8 +206,8 @@ export class PersistenceEngine {
           promoterId = defaultPromoterId;
         }
 
-        const scheduledDate = new Date(operation.startsAt);
-        scheduledDate.setDate(scheduledDate.getDate() + (cv.plannedVisitIndex - 1));
+        const scheduledDate = cv.scheduledDate ? new Date(cv.scheduledDate) : new Date(operation.startsAt);
+        if (!cv.scheduledDate) scheduledDate.setDate(scheduledDate.getDate() + (cv.plannedVisitIndex - 1));
 
         await tx.visit.create({
           data: {
@@ -215,7 +216,8 @@ export class PersistenceEngine {
             industryId,
             promoterId: promoterId || '',
             scheduledDate,
-            status: 'PLANEJADA',
+            status: cv.completed ? 'REALIZADA' : 'PLANEJADA',
+            completedDate: cv.completed ? scheduledDate : null,
           },
         });
       }
@@ -226,19 +228,22 @@ export class PersistenceEngine {
         include: { store: true, industry: true, promoter: true },
       });
 
-      const existingVisitsGrouped = groupExistingVisits(existingVisits);
-
       for (const cv of plan.visitsToUpdate) {
         const storeCode = cv.store.code;
         const industryCode = cv.industry.code;
         const promoterName = cv.promoter?.name?.toUpperCase() || 'NO_PROMOTER';
-        const key = `${storeCode}-${industryCode}-${promoterName}`;
+        const targetDate = cv.scheduledDate ? new Date(cv.scheduledDate) : new Date(operation.startsAt);
+        if (!cv.scheduledDate) targetDate.setDate(targetDate.getDate() + (cv.plannedVisitIndex - 1));
+        const existingVisit = existingVisits.find((visit) => {
+          const existingPromoter = visit.promoter?.name?.toUpperCase() || 'NO_PROMOTER';
+          const normalizedPromoter = existingPromoter === 'PROMOTOR PADRÃO' ? 'NO_PROMOTER' : existingPromoter;
+          return visit.store?.code === storeCode
+            && visit.industry?.code === industryCode
+            && normalizedPromoter === promoterName
+            && visit.scheduledDate.toISOString().slice(0, 10) === targetDate.toISOString().slice(0, 10);
+        });
 
-        const list = existingVisitsGrouped.get(key) || [];
-        const existingVisitIndex = cv.plannedVisitIndex - 1;
-
-        if (existingVisitIndex < list.length) {
-          const existingVisit = list[existingVisitIndex];
+        if (existingVisit) {
           let promoterId = cv.promoter ? promoterMap.get(cv.promoter.name.toUpperCase()) : null;
 
           if (!promoterId) {
@@ -249,6 +254,8 @@ export class PersistenceEngine {
             where: { id: existingVisit.id },
             data: {
               promoterId,
+              status: cv.completed ? 'REALIZADA' : 'PLANEJADA',
+              completedDate: cv.completed ? targetDate : null,
             },
           });
         }
@@ -261,12 +268,17 @@ export class PersistenceEngine {
         updatedStores: plan.storesToUpdate.length,
         createdIndustries: plan.industriesToCreate.length,
         updatedIndustries: plan.industriesToUpdate.length,
-        createdPromoters: plan.promotersToCreate.length,
+        createdPromoters: plan.promotersToCreate.length + createdDefaultPromoters,
         updatedPromoters: plan.promotersToUpdate.length,
         createdVisits: plan.visitsToCreate.length,
         updatedVisits: plan.visitsToUpdate.length,
         durationMs,
       };
-    });
+    };
+
+    if ('$transaction' in prisma && typeof prisma.$transaction === 'function') {
+      return prisma.$transaction((tx) => persistInTransaction(tx));
+    }
+    return persistInTransaction(prisma as unknown as Prisma.TransactionClient);
   }
 }

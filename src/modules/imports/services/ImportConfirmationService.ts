@@ -2,6 +2,7 @@ import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { hashSha256 } from './ImportPreviewArtifactService';
 import type { ImportConfirmationPayload, ImportConfirmationResponse, ImportConfirmationStatus } from '../types/ImportConfirmation';
+import { persistPreviewArtifact, type ImportPersistenceSummary } from './ImportPersistenceService';
 
 export type ConfirmationErrorCode = 'PREVIEW_NOT_FOUND' | 'PREVIEW_EXPIRED' | 'PREVIEW_ALREADY_CONSUMED' | 'IDEMPOTENCY_CONFLICT';
 
@@ -12,13 +13,14 @@ export class ImportConfirmationError extends Error {
   }
 }
 
-export interface ArtifactRecord { id: string; importId: string; tokenHash: string; acceptedRows: number; rejectedRows: number; expiresAt: Date; consumedAt: Date | null }
+export interface ArtifactRecord { id: string; importId: string; tokenHash: string; fileHash: string; payload: Prisma.JsonValue; acceptedRows: number; rejectedRows: number; expiresAt: Date; consumedAt: Date | null }
 export interface ConfirmationRecord { id: string; importId: string; previewArtifactId: string; idempotencyKey: string; acceptedRows: number; rejectedRows: number; confirmedAt: Date; previewArtifact: { tokenHash: string } }
 export interface ConfirmationTransaction {
   findConfirmationByKey(key: string): Promise<ConfirmationRecord | null>;
   findConfirmationByArtifact(artifactId: string): Promise<ConfirmationRecord | null>;
   findArtifactByTokenHash(tokenHash: string): Promise<ArtifactRecord | null>;
   consumeArtifact(artifactId: string, now: Date): Promise<boolean>;
+  persistArtifact(artifact: ArtifactRecord): Promise<ImportPersistenceSummary>;
   createConfirmation(input: { importId: string; previewArtifactId: string; idempotencyKey: string; acceptedRows: number; rejectedRows: number; confirmedAt: Date }): Promise<ConfirmationRecord>;
 }
 export interface ConfirmationStore {
@@ -35,6 +37,7 @@ function transactionAdapter(tx: Prisma.TransactionClient): ConfirmationTransacti
     findConfirmationByArtifact: (artifactId) => tx.importConfirmation.findUnique({ where: { previewArtifactId: artifactId }, include: confirmationInclude }),
     findArtifactByTokenHash: (tokenHash) => tx.importPreviewArtifact.findUnique({ where: { tokenHash } }),
     consumeArtifact: async (artifactId, now) => (await tx.importPreviewArtifact.updateMany({ where: { id: artifactId, consumedAt: null, expiresAt: { gt: now } }, data: { consumedAt: now } })).count === 1,
+    persistArtifact: (artifact) => persistPreviewArtifact(tx, artifact),
     createConfirmation: (input) => tx.importConfirmation.create({ data: input, include: confirmationInclude }),
   };
 }
@@ -45,8 +48,8 @@ export const prismaConfirmationStore: ConfirmationStore = {
   findArtifactByTokenHash: (tokenHash) => prisma.importPreviewArtifact.findUnique({ where: { tokenHash } }),
 };
 
-function response(record: ConfirmationRecord, status: ImportConfirmationStatus): ImportConfirmationResponse {
-  return { success: true, confirmationId: record.id, importId: record.importId, status, acceptedRows: record.acceptedRows, rejectedRows: record.rejectedRows, confirmedAt: record.confirmedAt.toISOString() };
+function response(record: ConfirmationRecord, status: ImportConfirmationStatus, persistence?: ImportPersistenceSummary): ImportConfirmationResponse {
+  return { success: true, confirmationId: record.id, importId: record.importId, status, acceptedRows: record.acceptedRows, rejectedRows: record.rejectedRows, confirmedAt: record.confirmedAt.toISOString(), persistence };
 }
 function idempotencyResult(record: ConfirmationRecord, tokenHash: string): ImportConfirmationResponse {
   if (record.previewArtifact.tokenHash === tokenHash) return response(record, 'ALREADY_CONFIRMED');
@@ -82,8 +85,9 @@ export async function confirmImportPreview(input: ImportConfirmationPayload, sto
         throw new ImportConfirmationError('PREVIEW_ALREADY_CONSUMED', 409, 'Este preview já foi confirmado.');
       }
       if (!await tx.consumeArtifact(artifact.id, now)) throw new ConcurrentConfirmationError();
+      const persistence = await tx.persistArtifact(artifact);
       const confirmation = await tx.createConfirmation({ importId: artifact.importId, previewArtifactId: artifact.id, idempotencyKey: input.idempotencyKey, acceptedRows: artifact.acceptedRows, rejectedRows: artifact.rejectedRows, confirmedAt: now });
-      return response(confirmation, 'CONFIRMED');
+      return response(confirmation, 'CONFIRMED', persistence);
     });
   } catch (error: unknown) {
     if (error instanceof ImportConfirmationError) throw error;

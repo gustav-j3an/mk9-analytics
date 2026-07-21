@@ -2,7 +2,6 @@ import { prisma as defaultPrisma } from '@/lib/prisma';
 import type { PrismaClient } from '@prisma/client';
 import type { OperationCandidate } from '../mapping/operation/OperationCandidate';
 import type { PersistencePlan } from './PersistencePlan';
-import { groupExistingVisits } from './utils/groupExistingVisits';
 import type { StoreCandidate } from '../mapping/store/StoreCandidate';
 import type { IndustryCandidate } from '../mapping/industry/IndustryCandidate';
 import type { PromoterCandidate } from '../mapping/promoter/PromoterCandidate';
@@ -78,8 +77,6 @@ export class PersistencePlanner {
     const promotersToUpdate = candidate.promoters.filter((p) => existingPromoterNames.has(p.name.toUpperCase()));
 
     // 3. Mapeamento e comparação de Visitas
-    const existingVisitsGrouped = groupExistingVisits(existingVisits);
-
     const visitsToCreate: VisitCandidate[] = [];
     const visitsToUpdate: VisitCandidate[] = [];
 
@@ -87,12 +84,19 @@ export class PersistencePlanner {
       const storeCode = candidateVisit.store.code;
       const industryCode = candidateVisit.industry.code;
       const promoterName = candidateVisit.promoter?.name?.toUpperCase() || 'NO_PROMOTER';
-      const key = `${storeCode}-${industryCode}-${promoterName}`;
+      const targetDate = candidateVisit.scheduledDate;
+      const matchingVisits = existingVisits.filter((visit) => {
+        const existingPromoter = visit.promoter?.name?.toUpperCase() || 'NO_PROMOTER';
+        const normalizedPromoter = existingPromoter === 'PROMOTOR PADRÃO' ? 'NO_PROMOTER' : existingPromoter;
+        return visit.store?.code === storeCode
+          && visit.industry?.code === industryCode
+          && normalizedPromoter === promoterName;
+      });
+      const matchingVisit = targetDate
+        ? matchingVisits.find((visit) => visit.scheduledDate.toISOString().slice(0, 10) === targetDate.toISOString().slice(0, 10))
+        : matchingVisits[candidateVisit.plannedVisitIndex - 1];
 
-      const list = existingVisitsGrouped.get(key) || [];
-      const existingVisitIndex = candidateVisit.plannedVisitIndex - 1;
-
-      if (existingVisitIndex < list.length) {
+      if (matchingVisit) {
         visitsToUpdate.push(candidateVisit);
       } else {
         visitsToCreate.push(candidateVisit);

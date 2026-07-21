@@ -11,7 +11,7 @@ const keyB = '550e8400-e29b-41d4-a716-446655440001';
 const now = new Date('2026-07-18T20:00:00.000Z');
 
 function artifact(id: string, token: string, expiresAt = new Date('2026-07-18T20:30:00.000Z')): ArtifactRecord {
-  return { id, importId: `import-${id}`, tokenHash: hashSha256(token), acceptedRows: 3, rejectedRows: 1, expiresAt, consumedAt: null };
+  return { id, importId: `import-${id}`, tokenHash: hashSha256(token), fileHash: `hash-${id}`, payload: {}, acceptedRows: 3, rejectedRows: 1, expiresAt, consumedAt: null };
 }
 
 class MemoryStore implements ConfirmationStore {
@@ -23,9 +23,11 @@ class MemoryStore implements ConfirmationStore {
   async transaction<T>(work: (transaction: ConfirmationTransaction) => Promise<T>): Promise<T> {
     const artifactsSnapshot = structuredClone(this.artifacts);
     const confirmationsSnapshot = structuredClone(this.confirmations);
+    const writesSnapshot = this.operationalWrites;
     try { return await work(this.transactionClient()); } catch (error) {
       this.artifacts = artifactsSnapshot;
       this.confirmations = confirmationsSnapshot;
+      this.operationalWrites = writesSnapshot;
       throw error;
     }
   }
@@ -43,6 +45,10 @@ class MemoryStore implements ConfirmationStore {
         if (!item || item.consumedAt || item.expiresAt <= consumedAt) return false;
         item.consumedAt = consumedAt;
         return true;
+      },
+      persistArtifact: async () => {
+        this.operationalWrites += 1;
+        return { createdStores: 1, updatedStores: 0, createdIndustries: 1, updatedIndustries: 0, createdPromoters: 0, updatedPromoters: 0, createdVisits: 3, updatedVisits: 0, ignoredDuplicates: 0, ignoredInvalidRows: 1 };
       },
       createConfirmation: async (input) => {
         if (this.failCreate) throw new Error('falha simulada');
@@ -65,14 +71,15 @@ async function expectError(promise: Promise<unknown>, code: string, status: numb
   });
 }
 
-test('confirma preview válido sem persistência operacional', async () => {
+test('confirma preview válido com persistência operacional', async () => {
   const store = new MemoryStore();
   store.artifacts.set('a', artifact('a', tokenA));
   const result = await confirmImportPreview({ previewToken: tokenA, idempotencyKey: keyA }, store, now);
   assert.equal(result.status, 'CONFIRMED');
   assert.equal(result.acceptedRows, 3);
   assert.equal(result.rejectedRows, 1);
-  assert.equal(store.operationalWrites, 0);
+  assert.equal(store.operationalWrites, 1);
+  assert.equal(result.persistence?.createdVisits, 3);
 });
 
 test('rejeita token inexistente com 404', async () => {
@@ -90,6 +97,7 @@ test('repete mesma chave e preview como ALREADY_CONFIRMED', async () => {
   store.artifacts.set('a', artifact('a', tokenA));
   await confirmImportPreview({ previewToken: tokenA, idempotencyKey: keyA }, store, now);
   assert.equal((await confirmImportPreview({ previewToken: tokenA, idempotencyKey: keyA }, store, now)).status, 'ALREADY_CONFIRMED');
+  assert.equal(store.operationalWrites, 1);
 });
 
 test('rejeita mesma chave em outro preview', async () => {
@@ -114,4 +122,12 @@ test('reverte consumedAt quando a criação da confirmação falha', async () =>
   await assert.rejects(confirmImportPreview({ previewToken: tokenA, idempotencyKey: keyA }, store, now));
   assert.equal(store.artifacts.get('a')?.consumedAt, null);
   assert.equal(store.confirmations.size, 0);
+});
+
+test('reverte persistência operacional quando a confirmação falha', async () => {
+  const store = new MemoryStore();
+  store.artifacts.set('a', artifact('a', tokenA));
+  store.failCreate = true;
+  await assert.rejects(confirmImportPreview({ previewToken: tokenA, idempotencyKey: keyA }, store, now));
+  assert.equal(store.operationalWrites, 0);
 });

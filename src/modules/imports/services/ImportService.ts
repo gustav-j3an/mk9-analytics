@@ -3,7 +3,8 @@ import { ImportStrategy } from '../types/ImportStrategy';
 import { ExcelStrategy } from '../strategies/ExcelStrategy';
 import { CsvStrategy } from '../strategies/CsvStrategy';
 import { SpreadsheetType } from '../types/SpreadsheetType';
-import type { ImportPreview, NormalizedImportRow } from '../types/ImportPreview';
+import { PREVIEW_ERRORS_COLUMN, PREVIEW_SOURCE_ROW_COLUMN, PREVIEW_STATUS_COLUMN, SOURCE_ROW_NUMBER } from '../types/ImportPreview';
+import type { ImportPreview, ImportValidationError, NormalizedImportRow } from '../types/ImportPreview';
 import { buildPreviewArtifact, createPreviewDescriptor } from './ImportPreviewArtifactService';
 import { countDetectedVisits } from '../utils/visit-markers';
 
@@ -12,8 +13,23 @@ export type PreviewResult = ImportPreview;
 export class UnsupportedImportFileError extends Error {}
 export class InvalidImportFileError extends Error {}
 
-export function createVisualPreviewSample(normalizedData: NormalizedImportRow[]): NormalizedImportRow[] {
-  return normalizedData.slice(0, 50);
+export function createVisualPreviewSample(normalizedData: NormalizedImportRow[], errors: ImportValidationError[] = []): NormalizedImportRow[] {
+  const errorsByRow = new Map<number, string[]>();
+  for (const error of errors) {
+    const messages = errorsByRow.get(error.row) ?? [];
+    messages.push(error.message);
+    errorsByRow.set(error.row, messages);
+  }
+  return normalizedData.map((row, index) => {
+    const sourceRow = row[SOURCE_ROW_NUMBER] ?? index + 1;
+    const rowErrors = errorsByRow.get(sourceRow) ?? [];
+    return {
+      [PREVIEW_SOURCE_ROW_COLUMN]: sourceRow,
+      [PREVIEW_STATUS_COLUMN]: rowErrors.length > 0 ? 'Inválida' : 'Válida',
+      [PREVIEW_ERRORS_COLUMN]: rowErrors.join(' '),
+      ...row,
+    };
+  });
 }
 
 // Define the import result type
@@ -84,8 +100,11 @@ export class ImportService {
 
       // Generate preview data
       const preview = await strategy.generatePreview(unique, duplicates, invalidRows);
-      const sample = createVisualPreviewSample(normalizedData);
-      const columns = normalizedData[0] ? Object.keys(normalizedData[0]) : [];
+      const sample = createVisualPreviewSample(normalizedData, errors);
+      const dataColumns = normalizedData[0] ? Object.keys(normalizedData[0]) : [];
+      const columns = [PREVIEW_SOURCE_ROW_COLUMN, PREVIEW_STATUS_COLUMN, PREVIEW_ERRORS_COLUMN, ...dataColumns];
+      const dateColumnCount = dataColumns.filter((column) => /^\d{2}_\d{2}_\d{4}$/.test(column)).length;
+      const rowsWithVisits = normalizedData.filter((row) => Number(row.TOTAL_VISITAS_DETECTADAS) > 0).length;
       const sheets = strategy.getSheetNames ? await strategy.getSheetNames(arrayBuffer) : [];
       const warnings: string[] = [];
 
@@ -121,6 +140,8 @@ export class ImportService {
         invalidRows,
         duplicateRows: duplicates.length,
         totalVisitsDetected,
+        dateColumnCount,
+        rowsWithVisits,
         errors,
         warnings,
       });
@@ -149,6 +170,8 @@ export class ImportService {
         invalidRows,
         duplicateRows: duplicates.length,
         totalVisitsDetected,
+        dateColumnCount,
+        rowsWithVisits,
         sample,
         previewData: sample,
         errors,

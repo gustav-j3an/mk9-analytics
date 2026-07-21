@@ -26,6 +26,18 @@ export interface ImportConfirmationResponse {
   acceptedRows: number;
   rejectedRows: number;
   confirmedAt: string;
+  persistence?: {
+    createdStores: number;
+    updatedStores: number;
+    createdIndustries: number;
+    updatedIndustries: number;
+    createdPromoters: number;
+    updatedPromoters: number;
+    createdVisits: number;
+    updatedVisits: number;
+    ignoredDuplicates: number;
+    ignoredInvalidRows: number;
+  };
 }
 
 export type ImportConfirmationErrorCode =

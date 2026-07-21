@@ -39,6 +39,8 @@ interface BuildPreviewArtifactInput {
   invalidRows: number;
   duplicateRows: number;
   totalVisitsDetected: number;
+  dateColumnCount: number;
+  rowsWithVisits: number;
   errors: ImportValidationError[];
   warnings: string[];
   now?: Date;
@@ -129,6 +131,8 @@ export function buildPreviewArtifact(input: BuildPreviewArtifactInput): BuiltPre
       invalidRows: input.invalidRows,
       duplicateRows: input.duplicateRows,
       totalVisitsDetected: input.totalVisitsDetected,
+      dateColumnCount: input.dateColumnCount,
+      rowsWithVisits: input.rowsWithVisits,
       errors: toJsonValue(errors),
       warnings: input.warnings,
       deduplicationCriterion: DEDUPLICATION_CRITERION,

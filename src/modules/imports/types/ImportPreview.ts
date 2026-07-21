@@ -2,6 +2,9 @@
 import { SpreadsheetType } from './SpreadsheetType';
 
 export const SOURCE_ROW_NUMBER: unique symbol = Symbol('import.sourceRowNumber');
+export const PREVIEW_SOURCE_ROW_COLUMN = 'LINHA_EXCEL';
+export const PREVIEW_STATUS_COLUMN = 'STATUS';
+export const PREVIEW_ERRORS_COLUMN = 'ERROS';
 
 export type NormalizedImportRow = Record<string, unknown> & {
   [SOURCE_ROW_NUMBER]?: number;
@@ -34,6 +37,8 @@ export interface ImportPreview {
   invalidRows: number;
   duplicateRows: number;
   totalVisitsDetected: number;
+  dateColumnCount: number;
+  rowsWithVisits: number;
   sample: NormalizedImportRow[];
   /** Kept for compatibility with the existing interface. */
   previewData: NormalizedImportRow[];
