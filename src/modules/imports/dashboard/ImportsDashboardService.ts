@@ -23,11 +23,11 @@ function getImportStatus(record: {
 }
 
 export class ImportsDashboardService {
-  static async getDashboardData(): Promise<{
+  static async getDashboardData(operationId?: string): Promise<{
     imports: ImportItem[];
     stats: ImportsStatsData;
   }> {
-    const rawImports = await ImportsDashboardRepository.getImportsList();
+    const rawImports = await ImportsDashboardRepository.getImportsList(operationId);
 
     const imports: ImportItem[] = rawImports.map((item) => {
       const file = item.files[0];
@@ -57,6 +57,8 @@ export class ImportsDashboardService {
           : artifact?.consumedAt
           ? artifact.consumedAt.toLocaleString('pt-BR')
           : null,
+        operationId: item.operationId,
+        operationName: item.operation?.name ?? null,
       };
     });
 

@@ -19,15 +19,19 @@ class MemoryStore implements ConfirmationStore {
   confirmations = new Map<string, ConfirmationRecord>();
   failCreate = false;
   operationalWrites = 0;
+  existingOperations = new Set(['operation-1']);
+  linkedImports = new Map<string, string>();
 
   async transaction<T>(work: (transaction: ConfirmationTransaction) => Promise<T>): Promise<T> {
     const artifactsSnapshot = structuredClone(this.artifacts);
     const confirmationsSnapshot = structuredClone(this.confirmations);
     const writesSnapshot = this.operationalWrites;
+    const linksSnapshot = structuredClone(this.linkedImports);
     try { return await work(this.transactionClient()); } catch (error) {
       this.artifacts = artifactsSnapshot;
       this.confirmations = confirmationsSnapshot;
       this.operationalWrites = writesSnapshot;
+      this.linkedImports = linksSnapshot;
       throw error;
     }
   }
@@ -49,6 +53,11 @@ class MemoryStore implements ConfirmationStore {
       persistArtifact: async () => {
         this.operationalWrites += 1;
         return { createdStores: 1, updatedStores: 0, createdIndustries: 1, updatedIndustries: 0, createdPromoters: 0, updatedPromoters: 0, createdVisits: 3, updatedVisits: 0, ignoredDuplicates: 0, ignoredInvalidRows: 1 };
+      },
+      linkImportToOperation: async (importId, operationId) => {
+        if (!this.existingOperations.has(operationId)) return false;
+        this.linkedImports.set(importId, operationId);
+        return true;
       },
       createConfirmation: async (input) => {
         if (this.failCreate) throw new Error('falha simulada');
@@ -80,6 +89,29 @@ test('confirma preview válido com persistência operacional', async () => {
   assert.equal(result.rejectedRows, 1);
   assert.equal(store.operationalWrites, 1);
   assert.equal(result.persistence?.createdVisits, 3);
+});
+
+test('confirma importação vinculada a uma operação existente', async () => {
+  const store = new MemoryStore();
+  store.artifacts.set('a', artifact('a', tokenA));
+  await confirmImportPreview({ previewToken: tokenA, idempotencyKey: keyA, operationId: 'operation-1' }, store, now);
+  assert.equal(store.linkedImports.get('import-a'), 'operation-1');
+});
+
+test('confirma importação sem operação e mantém vínculo ausente', async () => {
+  const store = new MemoryStore();
+  store.artifacts.set('a', artifact('a', tokenA));
+  await confirmImportPreview({ previewToken: tokenA, idempotencyKey: keyA }, store, now);
+  assert.equal(store.linkedImports.has('import-a'), false);
+});
+
+test('rejeita operação inexistente e reverte consumo e persistência', async () => {
+  const store = new MemoryStore();
+  store.artifacts.set('a', artifact('a', tokenA));
+  await expectError(confirmImportPreview({ previewToken: tokenA, idempotencyKey: keyA, operationId: 'operation-inexistente' }, store, now), 'OPERATION_NOT_FOUND', 404);
+  assert.equal(store.artifacts.get('a')?.consumedAt, null);
+  assert.equal(store.operationalWrites, 0);
+  assert.equal(store.linkedImports.size, 0);
 });
 
 test('rejeita token inexistente com 404', async () => {

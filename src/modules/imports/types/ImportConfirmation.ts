@@ -6,6 +6,7 @@ export const ImportConfirmationPayloadSchema = z.object({
     .max(512, 'Token de preview inválido.')
     .regex(/^[A-Za-z0-9_-]+$/, 'Token de preview inválido.'),
   idempotencyKey: z.string().uuid('Chave de idempotência inválida.'),
+  operationId: z.string().min(1, 'Operação inválida.').max(128, 'Operação inválida.').optional(),
 }).strict();
 
 export type ImportConfirmationPayload = z.infer<typeof ImportConfirmationPayloadSchema>;
@@ -22,6 +23,7 @@ export interface ImportConfirmationResponse {
   success: true;
   confirmationId: string;
   importId: string;
+  operationId?: string | null;
   status: ImportConfirmationStatus;
   acceptedRows: number;
   rejectedRows: number;
@@ -45,7 +47,8 @@ export type ImportConfirmationErrorCode =
   | 'PREVIEW_NOT_FOUND'
   | 'PREVIEW_EXPIRED'
   | 'PREVIEW_ALREADY_CONSUMED'
-  | 'IDEMPOTENCY_CONFLICT';
+  | 'IDEMPOTENCY_CONFLICT'
+  | 'OPERATION_NOT_FOUND';
 
 export interface ImportConfirmationErrorResponse {
   success: false;

@@ -8,11 +8,11 @@ import { ArrowLeft } from 'lucide-react';
 export const dynamic = 'force-dynamic';
 
 export default async function ImportsPage() {
-  const imports = await prisma.import.findMany({
+  const [imports, operations] = await Promise.all([prisma.import.findMany({
     orderBy: { createdAt: 'desc' },
     take: 10,
     include: { _count: { select: { files: true } } },
-  });
+  }), prisma.operation.findMany({ orderBy: [{ year: 'desc' }, { month: 'desc' }], select: { id: true, name: true, status: true } })]);
 
   return (
     <div className="min-h-screen bg-[#FAFAFA] p-6 md:p-8 animate-fadeIn">
@@ -36,7 +36,7 @@ export default async function ImportsPage() {
 
         {/* Dropzone Container */}
         <section className="bg-white border border-[#F4F4F5] rounded-2xl p-6 shadow-[0_1px_3px_rgba(0,0,0,0.01),_0_1px_2px_rgba(0,0,0,0.005)]">
-          <ImportCard />
+          <ImportCard operations={operations} />
         </section>
 
         {/* Recent Imports List */}

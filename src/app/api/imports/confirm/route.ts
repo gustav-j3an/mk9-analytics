@@ -29,6 +29,7 @@ export async function handleImportConfirmation(request: Request, confirm: Confir
       revalidatePath('/dashboard/importacoes');
       revalidatePath('/dashboard/operacoes');
       revalidatePath('/dashboard/visitas');
+      if (parsed.data.operationId) revalidatePath(`/dashboard/operacoes/${parsed.data.operationId}`);
     }
     return NextResponse.json(result);
   } catch (error: unknown) {

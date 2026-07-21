@@ -11,9 +11,10 @@ import type { ImportConfirmationErrorResponse, ImportConfirmationResponse } from
 interface Props {
   /** Optional callback when upload succeeds */
   onSuccess?: () => void;
+  operations?: Array<{ id: string; name: string; status: string }>;
 }
 
-export default function ImportCard({ onSuccess }: Props = {}) {
+export default function ImportCard({ onSuccess, operations = [] }: Props = {}) {
   const router = useRouter();
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
@@ -21,6 +22,7 @@ export default function ImportCard({ onSuccess }: Props = {}) {
   const [preview, setPreview] = useState<ImportPreview | null>(null);
   const [confirming, setConfirming] = useState(false);
   const [confirmation, setConfirmation] = useState<ImportConfirmationResponse | null>(null);
+  const [operationId, setOperationId] = useState('');
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -120,7 +122,7 @@ export default function ImportCard({ onSuccess }: Props = {}) {
       const response = await fetch('/api/imports/confirm', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ previewToken: preview.previewToken, idempotencyKey: crypto.randomUUID() }),
+        body: JSON.stringify({ previewToken: preview.previewToken, idempotencyKey: crypto.randomUUID(), operationId: operationId || undefined }),
       });
       const result = await response.json() as ImportConfirmationResponse | ImportConfirmationErrorResponse;
       if (!response.ok || !result.success) {
@@ -180,7 +182,8 @@ export default function ImportCard({ onSuccess }: Props = {}) {
                 <span>Linhas inválidas ignoradas: {persistence.ignoredInvalidRows}</span>
               </div>}
               <Link href="/dashboard" className="inline-flex rounded-md bg-[#20201F] px-3 py-2 text-xs font-semibold text-white">Ver dashboard</Link>
-            </div> : <div className="flex flex-wrap items-center justify-between gap-3">
+            </div> : <div className="flex flex-wrap items-end justify-between gap-3">
+              <label className="min-w-[260px] space-y-1"><span className="block text-xs font-semibold text-[#52525B]">Operação (opcional)</span><select value={operationId} onChange={(event) => setOperationId(event.target.value)} className="h-9 w-full rounded-md border border-[#D4D4D8] bg-white px-3 text-xs"><option value="">Sem operação vinculada</option>{operations.map((operation) => <option key={operation.id} value={operation.id}>{operation.name} — {operation.status}</option>)}</select></label>
               <p className="text-xs text-[#52525B]">Serão persistidas somente {preview.validRows} linhas válidas e únicas.</p>
               <button type="button" onClick={handleConfirm} disabled={!preview.previewToken || expired || preview.validRows === 0 || confirming} className="rounded-md bg-green-700 px-4 py-2 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">{confirming ? 'Confirmando...' : expired ? 'Preview expirado' : 'Confirmar importação'}</button>
             </div>}

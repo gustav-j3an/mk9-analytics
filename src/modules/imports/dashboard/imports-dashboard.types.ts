@@ -10,6 +10,8 @@ export interface ImportItem {
   invalidRows: number;
   duplicateRows: number;
   confirmedAt: string | null;
+  operationId: string | null;
+  operationName: string | null;
 }
 
 export interface ImportsStatsData {

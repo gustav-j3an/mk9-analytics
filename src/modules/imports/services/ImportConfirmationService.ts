@@ -4,7 +4,7 @@ import { hashSha256 } from './ImportPreviewArtifactService';
 import type { ImportConfirmationPayload, ImportConfirmationResponse, ImportConfirmationStatus } from '../types/ImportConfirmation';
 import { persistPreviewArtifact, type ImportPersistenceSummary } from './ImportPersistenceService';
 
-export type ConfirmationErrorCode = 'PREVIEW_NOT_FOUND' | 'PREVIEW_EXPIRED' | 'PREVIEW_ALREADY_CONSUMED' | 'IDEMPOTENCY_CONFLICT';
+export type ConfirmationErrorCode = 'PREVIEW_NOT_FOUND' | 'PREVIEW_EXPIRED' | 'PREVIEW_ALREADY_CONSUMED' | 'IDEMPOTENCY_CONFLICT' | 'OPERATION_NOT_FOUND';
 
 export class ImportConfirmationError extends Error {
   constructor(public readonly code: ConfirmationErrorCode, public readonly httpStatus: 404 | 409 | 410, message: string) {
@@ -21,6 +21,7 @@ export interface ConfirmationTransaction {
   findArtifactByTokenHash(tokenHash: string): Promise<ArtifactRecord | null>;
   consumeArtifact(artifactId: string, now: Date): Promise<boolean>;
   persistArtifact(artifact: ArtifactRecord): Promise<ImportPersistenceSummary>;
+  linkImportToOperation(importId: string, operationId: string): Promise<boolean>;
   createConfirmation(input: { importId: string; previewArtifactId: string; idempotencyKey: string; acceptedRows: number; rejectedRows: number; confirmedAt: Date }): Promise<ConfirmationRecord>;
 }
 export interface ConfirmationStore {
@@ -38,6 +39,12 @@ function transactionAdapter(tx: Prisma.TransactionClient): ConfirmationTransacti
     findArtifactByTokenHash: (tokenHash) => tx.importPreviewArtifact.findUnique({ where: { tokenHash } }),
     consumeArtifact: async (artifactId, now) => (await tx.importPreviewArtifact.updateMany({ where: { id: artifactId, consumedAt: null, expiresAt: { gt: now } }, data: { consumedAt: now } })).count === 1,
     persistArtifact: (artifact) => persistPreviewArtifact(tx, artifact),
+    linkImportToOperation: async (importId, operationId) => {
+      const operation = await tx.operation.findUnique({ where: { id: operationId }, select: { id: true } });
+      if (!operation) return false;
+      await tx.import.update({ where: { id: importId }, data: { operationId } });
+      return true;
+    },
     createConfirmation: (input) => tx.importConfirmation.create({ data: input, include: confirmationInclude }),
   };
 }
@@ -85,6 +92,9 @@ export async function confirmImportPreview(input: ImportConfirmationPayload, sto
         throw new ImportConfirmationError('PREVIEW_ALREADY_CONSUMED', 409, 'Este preview já foi confirmado.');
       }
       if (!await tx.consumeArtifact(artifact.id, now)) throw new ConcurrentConfirmationError();
+      if (input.operationId && !await tx.linkImportToOperation(artifact.importId, input.operationId)) {
+        throw new ImportConfirmationError('OPERATION_NOT_FOUND', 404, 'Operação não encontrada.');
+      }
       const persistence = await tx.persistArtifact(artifact);
       const confirmation = await tx.createConfirmation({ importId: artifact.importId, previewArtifactId: artifact.id, idempotencyKey: input.idempotencyKey, acceptedRows: artifact.acceptedRows, rejectedRows: artifact.rejectedRows, confirmedAt: now });
       return response(confirmation, 'CONFIRMED', persistence);

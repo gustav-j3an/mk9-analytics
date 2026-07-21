@@ -90,6 +90,7 @@ model Operation {
   description  String?
   observations String?
   visits       Visit[]
+  imports      Import[]
 
   @@unique([month, year])
 }
@@ -102,6 +103,10 @@ model Import {
   files            ImportFile[]
   previewArtifacts ImportPreviewArtifact[]
   confirmations    ImportConfirmation[]
+  operationId      String?
+  operation        Operation?              @relation(fields: [operationId], references: [id], onDelete: SetNull)
+
+  @@index([operationId])
 }
 
 model ImportFile {

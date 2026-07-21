@@ -76,6 +76,10 @@ export const operationService = {
     const operation = await prisma.operation.findUnique({
       where: { id },
       include: {
+        imports: {
+          orderBy: { createdAt: 'desc' },
+          include: { files: true, confirmations: true },
+        },
         visits: {
           orderBy: { scheduledDate: 'asc' },
           include: {

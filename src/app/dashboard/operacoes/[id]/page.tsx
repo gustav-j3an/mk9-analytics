@@ -25,7 +25,7 @@ export default async function OperacaoDetalhesPage({ params, searchParams }: { p
     {tab === 'lojas' && <SimpleTable headers={['Loja', 'Rede', 'Cidade', 'UF']} rows={stores.map((store) => [store.name, store.chain || '-', store.city || '-', store.state || '-'])} />}
     {tab === 'promotores' && <SimpleTable headers={['Promotor', 'Supervisor', 'Cidade', 'UF']} rows={promoters.map((promoter) => [promoter.name, promoter.supervisor.name, promoter.city || '-', promoter.state || '-'])} />}
     {tab === 'visitas' && <SimpleTable headers={['Data', 'Loja', 'Industria', 'Promotor', 'Status']} rows={operation.visits.map((visit) => [formatDatePtBr(visit.scheduledDate), visit.store.name, visit.industry.name, visit.promoter.name, visit.status])} />}
-    {tab === 'importacoes' && <section className="rounded-md border bg-white p-6"><h2 className="text-sm font-semibold">Importacoes da operacao</h2><p className="mt-2 text-sm text-[#73736f]">O banco atual nao possui vinculo entre importacoes e operacoes. Nenhum registro e associado por inferencia.</p></section>}
+    {tab === 'importacoes' && <SimpleTable headers={['Data', 'Arquivo', 'Status', 'Confirmacao']} rows={operation.imports.map((item) => [formatDatePtBr(item.createdAt, true), item.files[0]?.fileName || 'Arquivo nao identificado', item.status, item.confirmations[0] ? formatDatePtBr(item.confirmations[0].confirmedAt, true) : '-'])} />}
   </main>;
 }
 
