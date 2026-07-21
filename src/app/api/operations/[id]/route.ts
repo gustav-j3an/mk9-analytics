@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { operationService } from '@/modules/operations/services/OperationService';
+import { revalidatePath } from 'next/cache';
 
 export async function GET(
   request: NextRequest,
@@ -76,6 +77,8 @@ export async function POST(
         );
     }
 
+    revalidatePath('/dashboard/operacoes');
+    revalidatePath(`/dashboard/operacoes/${id}`);
     return NextResponse.json(result);
   } catch (error: any) {
     return NextResponse.json(

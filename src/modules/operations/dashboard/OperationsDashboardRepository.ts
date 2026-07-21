@@ -10,6 +10,8 @@ export class OperationsDashboardRepository {
             status: true,
             storeId: true,
             promoterId: true,
+            industry: { select: { name: true } },
+            promoter: { select: { supervisor: { select: { name: true } } } },
           },
         },
       },

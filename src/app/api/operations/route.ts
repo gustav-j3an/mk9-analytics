@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { operationService } from '@/modules/operations/services/OperationService';
+import { revalidatePath } from 'next/cache';
 
 export async function GET(request: NextRequest) {
   try {
@@ -30,6 +31,7 @@ export async function POST(request: NextRequest) {
     const data = await request.json();
 
     const operation = await operationService.createOperation(data);
+    revalidatePath('/dashboard/operacoes');
 
     return NextResponse.json(operation, { status: 201 });
   } catch (error: any) {
@@ -55,6 +57,8 @@ export async function PUT(request: NextRequest) {
     const data = await request.json();
 
     const operation = await operationService.updateOperation(id, data);
+    revalidatePath('/dashboard/operacoes');
+    revalidatePath(`/dashboard/operacoes/${id}`);
 
     return NextResponse.json(operation);
   } catch (error: any) {

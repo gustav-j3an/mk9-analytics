@@ -72,6 +72,28 @@ export const operationService = {
     return operation;
   },
 
+  async getManagementDetail(id: string) {
+    const operation = await prisma.operation.findUnique({
+      where: { id },
+      include: {
+        visits: {
+          orderBy: { scheduledDate: 'asc' },
+          include: {
+            store: true,
+            industry: true,
+            promoter: { include: { supervisor: true } },
+          },
+        },
+      },
+    });
+    if (!operation) {
+      const error = new Error('Operation not found');
+      (error as Error & { status?: number }).status = 404;
+      throw error;
+    }
+    return operation;
+  },
+
   async createOperation(data: Record<string, any>) {
     const validated = validateOperationData(normalizeOperationInput(data));
 
