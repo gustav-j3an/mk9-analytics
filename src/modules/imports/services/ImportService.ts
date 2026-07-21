@@ -5,6 +5,7 @@ import { CsvStrategy } from '../strategies/CsvStrategy';
 import { SpreadsheetType } from '../types/SpreadsheetType';
 import type { ImportPreview, NormalizedImportRow } from '../types/ImportPreview';
 import { buildPreviewArtifact, createPreviewDescriptor } from './ImportPreviewArtifactService';
+import { countDetectedVisits } from '../utils/visit-markers';
 
 export type PreviewResult = ImportPreview;
 
@@ -64,6 +65,7 @@ export class ImportService {
 
       // Normalize the raw data
       const normalizedData = await strategy.normalize(rawData);
+      const totalVisitsDetected = countDetectedVisits(normalizedData);
 
       if (normalizedData.length === 0) {
         throw new InvalidImportFileError('O arquivo contém cabeçalhos, mas nenhuma linha de dados.');
@@ -114,6 +116,7 @@ export class ImportService {
         validRows: valid.length,
         invalidRows,
         duplicateRows: duplicates.length,
+        totalVisitsDetected,
         errors,
         warnings,
       });
@@ -141,6 +144,7 @@ export class ImportService {
         validRows: valid.length,
         invalidRows,
         duplicateRows: duplicates.length,
+        totalVisitsDetected,
         sample,
         previewData: sample,
         errors,

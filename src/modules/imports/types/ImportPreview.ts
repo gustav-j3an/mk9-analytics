@@ -33,6 +33,7 @@ export interface ImportPreview {
   validRows: number;
   invalidRows: number;
   duplicateRows: number;
+  totalVisitsDetected: number;
   sample: NormalizedImportRow[];
   /** Kept for compatibility with the existing interface. */
   previewData: NormalizedImportRow[];

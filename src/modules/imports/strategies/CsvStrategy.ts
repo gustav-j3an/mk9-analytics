@@ -6,6 +6,7 @@ import { SOURCE_ROW_NUMBER } from '../types/ImportPreview';
 import type { ImportValidationError, NormalizedImportRow } from '../types/ImportPreview';
 import type { StrategyPreview } from '../types/ImportStrategy';
 import { validatePreviewRows } from '../services/validate-preview-rows';
+import { isDateColumnHeader, isVisitMarked, VISIT_TOTAL_COLUMN } from '../utils/visit-markers';
 
 export class CsvStrategy implements ImportStrategy {
   async detectOrigin(): Promise<string> {
@@ -51,13 +52,25 @@ export class CsvStrategy implements ImportStrategy {
     }
 
     const headers = (rawData[0] as unknown[]).map((header) => String(header ?? ''));
+    const visitColumnIndexes = new Set<number>();
+    headers.forEach((header, index) => {
+      if (isDateColumnHeader(header)) visitColumnIndexes.add(index);
+    });
     const dataRows = rawData.slice(1) as unknown[][];
 
     return dataRows.map((row, rowIndex) => {
       const obj: NormalizedImportRow = {};
+      let totalVisits = 0;
       headers.forEach((header, index) => {
-        obj[header] = row[index];
+        if (visitColumnIndexes.has(index)) {
+          const marked = isVisitMarked(row[index], row[index], undefined);
+          obj[header] = marked ? '✓' : '-';
+          if (marked) totalVisits += 1;
+        } else {
+          obj[header] = row[index];
+        }
       });
+      if (visitColumnIndexes.size > 0) obj[VISIT_TOTAL_COLUMN] = totalVisits;
       obj[SOURCE_ROW_NUMBER] = rowIndex + 2;
       return obj;
     });

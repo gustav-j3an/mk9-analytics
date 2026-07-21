@@ -6,6 +6,9 @@ import { ExcelStrategy } from './ExcelStrategy';
 import { SpreadsheetType } from '../types/SpreadsheetType';
 import type { ImportStrategy } from '../types/ImportStrategy';
 import { SOURCE_ROW_NUMBER } from '../types/ImportPreview';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { VISIT_TOTAL_COLUMN, countDetectedVisits } from '../utils/visit-markers';
 
 function createWorkbook(rows: unknown[][]): ArrayBuffer {
   const workbook = XLSX.utils.book_new();
@@ -187,4 +190,33 @@ test('identificador interno não aparece nas colunas nem no JSON do preview', as
   assert.equal(previewRow[SOURCE_ROW_NUMBER], 2);
   assert.equal(Object.keys(previewRow).includes('SOURCE_ROW_NUMBER'), false);
   assert.equal(JSON.stringify(previewRow).includes('sourceRowNumber'), false);
+});
+
+test('fórmula com resultado verdadeiro é exibida como visita', async () => {
+  const workbook = XLSX.utils.book_new();
+  const worksheet = XLSX.utils.aoa_to_sheet([
+    ['LOJA', '01/06/2026'],
+    ['Loja A', null],
+  ]);
+  worksheet.B2 = { t: 'b', v: true, f: 'TRUE()' };
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Dados');
+  const data = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' }) as ArrayBuffer;
+  const result = await createPreview(new ExcelStrategy(), data);
+
+  assert.equal(result.normalizedData[0]['01_06_2026'], '✓');
+  assert.equal(result.normalizedData[0][VISIT_TOTAL_COLUMN], 1);
+});
+
+test('planilha mensal real detecta as 28 visitas e preserva a linha física', async () => {
+  const fixturePath = fileURLToPath(new URL('./fixtures/ao-quadrado-junho-2026.xlsx', import.meta.url));
+  const bytes = readFileSync(fixturePath);
+  const data = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
+  const result = await createPreview(new ExcelStrategy(), data);
+
+  assert.equal(countDetectedVisits(result.normalizedData), 28);
+  const excelRow12 = result.normalizedData.find((row) => row[SOURCE_ROW_NUMBER] === 12);
+  assert.ok(excelRow12);
+  assert.equal(excelRow12[VISIT_TOTAL_COLUMN], 2);
+  assert.equal(excelRow12['05_06_2026'], '✓');
+  assert.equal(excelRow12['26_06_2026'], '✓');
 });

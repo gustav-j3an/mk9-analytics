@@ -123,6 +123,9 @@ export default function ImportCard({ onSuccess }: Props = {}) {
               Remover
             </button>
           </div>
+          <p className="mb-4 text-xs font-semibold text-[#3F3F46]">
+            Total de visitas detectadas no arquivo: {preview.totalVisitsDetected}
+          </p>
           <PreviewTable columns={preview.columns} data={preview.sample} />
         </div>
 

@@ -6,10 +6,13 @@ import { SOURCE_ROW_NUMBER } from '../types/ImportPreview';
 import type { ImportValidationError, NormalizedImportRow } from '../types/ImportPreview';
 import type { StrategyPreview } from '../types/ImportStrategy';
 import { validatePreviewRows } from '../services/validate-preview-rows';
+import { getCellFormula, getCellValue, getFormattedCellValue, isSpreadsheetCell } from '../types/SpreadsheetCell';
+import { isDateColumnHeader, isVisitMarked, VISIT_TOTAL_COLUMN } from '../utils/visit-markers';
 
 export class ExcelStrategy implements ImportStrategy {
   private isFilled(value: unknown): boolean {
-    return value !== null && value !== undefined && String(value).trim() !== '';
+    const rawValue = getCellValue(value);
+    return rawValue !== null && rawValue !== undefined && String(rawValue).trim() !== '';
   }
 
   private findHeaderRowIndex(data: unknown[]): number {
@@ -34,7 +37,8 @@ export class ExcelStrategy implements ImportStrategy {
     const occurrences = new Map<string, number>();
 
     return headerRow.map((header, index) => {
-      const normalized = String(header ?? '')
+      const headerValue = getFormattedCellValue(header) ?? getCellValue(header);
+      const normalized = String(headerValue ?? '')
         .trim()
         .normalize('NFD')
         .replace(/[\u0300-\u036f]/g, '')
@@ -99,6 +103,10 @@ export class ExcelStrategy implements ImportStrategy {
     const headerRowIndex = this.findHeaderRowIndex(rawData);
     const headerRow = Array.isArray(rawData[headerRowIndex]) ? rawData[headerRowIndex] : [];
     const headers = this.normalizeHeaders(headerRow);
+    const visitColumnIndexes = new Set<number>();
+    headerRow.forEach((cell, index) => {
+      if (isDateColumnHeader(getCellValue(cell), getFormattedCellValue(cell))) visitColumnIndexes.add(index);
+    });
     const dataRows: Array<{ row: unknown[]; sourceRow: number }> = [];
     rawData.slice(headerRowIndex + 1).forEach((row, index) => {
       if (Array.isArray(row) && row.some((value) => this.isFilled(value))) {
@@ -108,9 +116,31 @@ export class ExcelStrategy implements ImportStrategy {
 
     return dataRows.map(({ row, sourceRow }) => {
       const obj: NormalizedImportRow = {};
+      let totalVisits = 0;
       headers.forEach((header, index) => {
-        obj[header] = row[index];
+        const cell = row[index];
+        if (visitColumnIndexes.has(index)) {
+          const marked = isVisitMarked(getCellValue(cell), getFormattedCellValue(cell), getCellFormula(cell));
+          obj[header] = marked ? '✓' : '-';
+          if (marked) totalVisits += 1;
+          if (process.env.NODE_ENV === 'development' && (this.isFilled(cell) || getCellFormula(cell))) {
+            const rawValue = getCellValue(cell);
+            console.debug('[imports:xlsx] visit cell', {
+              row: sourceRow,
+              column: header,
+              v: rawValue,
+              w: getFormattedCellValue(cell),
+              t: isSpreadsheetCell(cell) ? cell.type : typeof rawValue,
+              f: getCellFormula(cell),
+              boolean: typeof rawValue === 'boolean' ? rawValue : undefined,
+              unicode: typeof rawValue === 'string' ? Array.from(rawValue, (character) => `U+${character.codePointAt(0)?.toString(16).toUpperCase().padStart(4, '0')}`) : undefined,
+            });
+          }
+        } else {
+          obj[header] = getCellValue(cell);
+        }
       });
+      if (visitColumnIndexes.size > 0) obj[VISIT_TOTAL_COLUMN] = totalVisits;
       obj[SOURCE_ROW_NUMBER] = sourceRow;
       return obj;
     });

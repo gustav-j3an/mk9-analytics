@@ -1,4 +1,20 @@
 import * as XLSX from 'xlsx';
+import type { SpreadsheetCell } from '../types/SpreadsheetCell';
+
+function worksheetToRows(worksheet: XLSX.WorkSheet): SpreadsheetCell[][] {
+  if (!worksheet['!ref']) return [];
+  const range = XLSX.utils.decode_range(worksheet['!ref']);
+  const rows: SpreadsheetCell[][] = [];
+  for (let rowIndex = range.s.r; rowIndex <= range.e.r; rowIndex += 1) {
+    const row: SpreadsheetCell[] = [];
+    for (let columnIndex = range.s.c; columnIndex <= range.e.c; columnIndex += 1) {
+      const cell = worksheet[XLSX.utils.encode_cell({ r: rowIndex, c: columnIndex })] as XLSX.CellObject | undefined;
+      row[columnIndex - range.s.c] = { value: cell?.v, formattedValue: cell?.w, formula: cell?.f, type: cell?.t };
+    }
+    rows.push(row);
+  }
+  return rows;
+}
 
 export class ExcelReaderService {
   static getSheetNamesFromBuffer(buffer: Buffer): string[] {
@@ -17,8 +33,7 @@ export class ExcelReaderService {
         const workbook = XLSX.read(buffer, { type: 'buffer' });
         const firstSheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[firstSheetName];
-        const json = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-        resolve(json);
+        resolve(worksheetToRows(worksheet));
       } catch (error) {
         reject(error);
       }
@@ -39,8 +54,7 @@ export class ExcelReaderService {
           const workbook = XLSX.read(data, { type: 'array' });
           const firstSheetName = workbook.SheetNames[0];
           const worksheet = workbook.Sheets[firstSheetName];
-          const json = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-          resolve(json);
+          resolve(worksheetToRows(worksheet));
         } catch (error) {
           reject(error);
         }
