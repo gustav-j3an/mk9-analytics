@@ -9,22 +9,12 @@ function normalizeVisitValue(value: unknown): string | null {
   return String(value).replace(INVISIBLE_SPACES, '').trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
 }
 
-export function isVisitMarked(value: unknown, formattedValue?: unknown, formula?: unknown): boolean {
+export function isVisitMarked(value: unknown): boolean {
   if (value === true || value === 1) return true;
   if (value === false || value === 0) return false;
-  if (value === null || value === undefined) {
-    if (formattedValue === null || formattedValue === undefined || normalizeVisitValue(formattedValue) === '') {
-      const normalizedFormula = normalizeVisitValue(formula)?.replace(/^=/, '');
-      return normalizedFormula === 'TRUE' || normalizedFormula === 'TRUE()';
-    }
-  }
-  for (const candidate of [value, formattedValue]) {
-    const normalized = normalizeVisitValue(candidate);
-    if (normalized === null || UNMARKED_VALUES.has(normalized)) continue;
-    if (MARKED_VALUES.has(normalized)) return true;
-  }
-  const normalizedFormula = normalizeVisitValue(formula)?.replace(/^=/, '');
-  return normalizedFormula === 'TRUE' || normalizedFormula === 'TRUE()';
+  const normalized = normalizeVisitValue(value);
+  if (normalized === null || UNMARKED_VALUES.has(normalized)) return false;
+  return MARKED_VALUES.has(normalized);
 }
 
 export function isDateColumnHeader(value: unknown, formattedValue?: unknown): boolean {

@@ -63,7 +63,7 @@ export class CsvStrategy implements ImportStrategy {
       let totalVisits = 0;
       headers.forEach((header, index) => {
         if (visitColumnIndexes.has(index)) {
-          const marked = isVisitMarked(row[index], row[index], undefined);
+          const marked = isVisitMarked(row[index]);
           obj[header] = marked ? '✓' : '-';
           if (marked) totalVisits += 1;
         } else {

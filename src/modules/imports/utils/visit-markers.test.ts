@@ -28,8 +28,7 @@ test('não marca células vazias nem valores negativos explícitos', () => {
   }
 });
 
-test('usa valor formatado e fórmula verdadeira sem interpretar fórmulas arbitrárias', () => {
-  assert.equal(isVisitMarked(undefined, '✅'), true);
-  assert.equal(isVisitMarked(undefined, undefined, 'TRUE()'), true);
-  assert.equal(isVisitMarked(undefined, undefined, 'A1=1'), false);
+test('reconhece o valor formatado quando ele é passado para a função central', () => {
+  const formattedValue = '✅';
+  assert.equal(isVisitMarked(formattedValue), true);
 });

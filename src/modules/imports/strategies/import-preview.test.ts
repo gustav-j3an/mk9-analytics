@@ -9,6 +9,7 @@ import { SOURCE_ROW_NUMBER } from '../types/ImportPreview';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { VISIT_TOTAL_COLUMN, countDetectedVisits } from '../utils/visit-markers';
+import { getCellValue, getFormattedCellValue, isSpreadsheetCell } from '../types/SpreadsheetCell';
 
 function createWorkbook(rows: unknown[][]): ArrayBuffer {
   const workbook = XLSX.utils.book_new();
@@ -192,7 +193,7 @@ test('identificador interno não aparece nas colunas nem no JSON do preview', as
   assert.equal(JSON.stringify(previewRow).includes('sourceRowNumber'), false);
 });
 
-test('fórmula com resultado verdadeiro é exibida como visita', async () => {
+test('valor booleano verdadeiro de fórmula é exibido como visita', async () => {
   const workbook = XLSX.utils.book_new();
   const worksheet = XLSX.utils.aoa_to_sheet([
     ['LOJA', '01/06/2026'],
@@ -207,6 +208,34 @@ test('fórmula com resultado verdadeiro é exibida como visita', async () => {
   assert.equal(result.normalizedData[0][VISIT_TOTAL_COLUMN], 1);
 });
 
+test('shared string mantém cell.v, cell.w e cell.t decodificados', async () => {
+  const fixturePath = fileURLToPath(new URL('./fixtures/ao-quadrado-junho-2026.xlsx', import.meta.url));
+  const bytes = readFileSync(fixturePath);
+  const data = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
+  const strategy = new ExcelStrategy();
+  const rawData = await strategy.parse(data);
+  const row12 = rawData[11] as unknown[];
+  const cellM12 = row12[12];
+
+  assert.equal(getCellValue(cellM12), '✅');
+  assert.equal(getFormattedCellValue(cellM12), '✅');
+  assert.equal(isSpreadsheetCell(cellM12) && cellM12.type, 's');
+});
+
+test('múltiplas datas na mesma linha são preservadas e somadas', async () => {
+  const result = await createPreview(new ExcelStrategy(), createWorkbook([
+    ['LOJA', '01/06/2026', '02/06/2026', 'REALIZADO'],
+    ['Loja A', '✅', '', 1],
+    ['Loja B', '✓', '✔', 2],
+  ]));
+
+  assert.equal(result.normalizedData[0]['01_06_2026'], '✓');
+  assert.equal(result.normalizedData[0]['02_06_2026'], '-');
+  assert.equal(result.normalizedData[0][VISIT_TOTAL_COLUMN], 1);
+  assert.equal(result.normalizedData[1][VISIT_TOTAL_COLUMN], 2);
+  assert.equal(countDetectedVisits(result.normalizedData), 3);
+});
+
 test('planilha mensal real detecta as 28 visitas e preserva a linha física', async () => {
   const fixturePath = fileURLToPath(new URL('./fixtures/ao-quadrado-junho-2026.xlsx', import.meta.url));
   const bytes = readFileSync(fixturePath);
@@ -214,6 +243,8 @@ test('planilha mensal real detecta as 28 visitas e preserva a linha física', as
   const result = await createPreview(new ExcelStrategy(), data);
 
   assert.equal(countDetectedVisits(result.normalizedData), 28);
+  assert.equal(result.valid.length, 24);
+  assert.equal(new Set(result.errors.map((error) => error.row)).size, 3);
   const excelRow12 = result.normalizedData.find((row) => row[SOURCE_ROW_NUMBER] === 12);
   assert.ok(excelRow12);
   assert.equal(excelRow12[VISIT_TOTAL_COLUMN], 2);

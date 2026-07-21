@@ -120,11 +120,12 @@ export class ExcelStrategy implements ImportStrategy {
       headers.forEach((header, index) => {
         const cell = row[index];
         if (visitColumnIndexes.has(index)) {
-          const marked = isVisitMarked(getCellValue(cell), getFormattedCellValue(cell), getCellFormula(cell));
+          const rawValue = getCellValue(cell);
+          const marked = isVisitMarked(rawValue)
+            || ((rawValue === null || rawValue === undefined) && isVisitMarked(getFormattedCellValue(cell)));
           obj[header] = marked ? '✓' : '-';
           if (marked) totalVisits += 1;
           if (process.env.NODE_ENV === 'development' && (this.isFilled(cell) || getCellFormula(cell))) {
-            const rawValue = getCellValue(cell);
             console.debug('[imports:xlsx] visit cell', {
               row: sourceRow,
               column: header,
