@@ -169,6 +169,7 @@ export default function ImportCard({ onSuccess, operations = [] }: Props = {}) {
               ['Lojas com visitas', preview.rowsWithVisits],
             ].map(([label, value]) => <div key={label} className="rounded-lg border border-[#E4E4E7] bg-white p-3"><p className="text-[10px] font-semibold uppercase tracking-wide text-[#71717A]">{label}</p><p className="mt-1 truncate text-sm font-bold text-[#18181B]" title={String(value)}>{value}</p></div>)}
           </div>
+          {preview.warnings.length > 0 && <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900"><p className="font-semibold">Avisos do arquivo</p><ul className="mt-1 list-disc space-y-1 pl-4">{preview.warnings.map((warning) => <li key={warning}>{warning}</li>)}</ul></div>}
           <PreviewTable columns={preview.columns} data={preview.sample} />
           <div className="mt-5 rounded-xl border border-[#E4E4E7] bg-white p-4">
             {confirmation ? <div className="space-y-3">

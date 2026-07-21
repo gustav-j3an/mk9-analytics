@@ -22,6 +22,7 @@ export class CsvStrategy implements ImportStrategy {
     const headerString = headers.join(' ').toUpperCase();
 
     const typeKeywords: Record<SpreadsheetType, string[]> = {
+      [SpreadsheetType.KING_CHECKLIST]: ['BANDEIRA', 'LOJA', 'UF', 'VISITA SEMANAL', 'VISITA MENSAL', 'REALIZADO'],
       [SpreadsheetType.PROMOTORES]: ['NOME', 'CIDADE', 'ESTADO', 'SUPERVISOR'],
       [SpreadsheetType.LOJAS]: ['NOME', 'CODIGO', 'CIDADE', 'ESTADO', 'REDE'],
       [SpreadsheetType.INDUSTRIAS]: ['CODIGO', 'NOME'],

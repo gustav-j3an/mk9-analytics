@@ -7,6 +7,7 @@ import { PREVIEW_ERRORS_COLUMN, PREVIEW_SOURCE_ROW_COLUMN, PREVIEW_STATUS_COLUMN
 import type { ImportPreview, ImportValidationError, NormalizedImportRow } from '../types/ImportPreview';
 import { buildPreviewArtifact, createPreviewDescriptor } from './ImportPreviewArtifactService';
 import { countDetectedVisits } from '../utils/visit-markers';
+import { KING_WARNING_COLUMN } from '../strategies/KingChecklistLayout';
 
 export type PreviewResult = ImportPreview;
 
@@ -107,6 +108,7 @@ export class ImportService {
       const rowsWithVisits = normalizedData.filter((row) => Number(row.TOTAL_VISITAS_DETECTADAS) > 0).length;
       const sheets = strategy.getSheetNames ? await strategy.getSheetNames(arrayBuffer) : [];
       const warnings: string[] = [];
+      const kingDivergences = normalizedData.filter((row) => Boolean(row[KING_WARNING_COLUMN])).length;
 
       if (detectedType === SpreadsheetType.DESCONHECIDO) {
         warnings.push('O tipo da planilha não foi reconhecido pelos cabeçalhos encontrados.');
@@ -116,6 +118,9 @@ export class ImportService {
       }
       if (invalidRows > 0) {
         warnings.push(`${invalidRows} linha(s) inválida(s) não foram incluídas na amostra.`);
+      }
+      if (kingDivergences > 0) {
+        warnings.push(`${kingDivergences} linha(s) possuem divergência entre REALIZADO e visitas detectadas.`);
       }
 
       if (unique.length === 0) {

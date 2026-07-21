@@ -8,6 +8,7 @@ import type { StrategyPreview } from '../types/ImportStrategy';
 import { validatePreviewRows } from '../services/validate-preview-rows';
 import { getCellFormula, getCellValue, getFormattedCellValue, isSpreadsheetCell } from '../types/SpreadsheetCell';
 import { isDateColumnHeader, isVisitMarked, VISIT_TOTAL_COLUMN } from '../utils/visit-markers';
+import { isKingChecklistLayout, normalizeKingChecklist } from './KingChecklistLayout';
 
 export class ExcelStrategy implements ImportStrategy {
   private isFilled(value: unknown): boolean {
@@ -61,12 +62,14 @@ export class ExcelStrategy implements ImportStrategy {
       return SpreadsheetType.DESCONHECIDO;
     }
 
+    if (isKingChecklistLayout(data)) return SpreadsheetType.KING_CHECKLIST;
     const headerRowIndex = this.findHeaderRowIndex(data);
     const headerRow = Array.isArray(data[headerRowIndex]) ? data[headerRowIndex] : [];
     const headers = this.normalizeHeaders(headerRow);
     const headerString = headers.join(' ').toUpperCase();
 
     const typeKeywords: Record<SpreadsheetType, string[]> = {
+      [SpreadsheetType.KING_CHECKLIST]: ['BANDEIRA', 'LOJA', 'UF', 'VISITA_SEMANAL', 'VISITA_MENSAL', 'REALIZADO'],
       [SpreadsheetType.PROMOTORES]: ['NOME', 'CIDADE', 'ESTADO', 'SUPERVISOR'],
       [SpreadsheetType.LOJAS]: ['NOME', 'CODIGO', 'CIDADE', 'ESTADO', 'REDE'],
       [SpreadsheetType.INDUSTRIAS]: ['CODIGO', 'NOME'],
@@ -100,6 +103,7 @@ export class ExcelStrategy implements ImportStrategy {
       return [];
     }
 
+    if (isKingChecklistLayout(rawData)) return normalizeKingChecklist(rawData).rows;
     const headerRowIndex = this.findHeaderRowIndex(rawData);
     const headerRow = Array.isArray(rawData[headerRowIndex]) ? rawData[headerRowIndex] : [];
     const headers = this.normalizeHeaders(headerRow);

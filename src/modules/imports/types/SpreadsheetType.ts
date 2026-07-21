@@ -1,5 +1,6 @@
 // src/modules/imports/types/SpreadsheetType.ts
 export enum SpreadsheetType {
+  KING_CHECKLIST = 'KING_CHECKLIST',
   CHECKLIST_INDUSTRIA = 'CHECKLIST_INDUSTRIA',
   ROTEIRO_PROMOTORES = 'ROTEIRO_PROMOTORES',
   FREQUENCIA_LOJAS = 'FREQUENCIA_LOJAS',

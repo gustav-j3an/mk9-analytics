@@ -37,7 +37,9 @@ export function validatePreviewRows(normalizedData: NormalizedImportRow[]): {
         }
       });
 
-      const requiresFrequency = FREQUENCY_FIELDS.some((field) => field in data);
+      const isKingChecklistRow = 'REALIZADO' in data && 'AVISOS' in data
+        && FREQUENCY_FIELDS.every((field) => typeof data[field] === 'number');
+      const requiresFrequency = FREQUENCY_FIELDS.some((field) => field in data) && !isKingChecklistRow;
       const hasFrequency = FREQUENCY_FIELDS.some((field) => hasValue(data[field]));
       if (requiresFrequency && !hasFrequency) {
         rowErrors.push(createError(
