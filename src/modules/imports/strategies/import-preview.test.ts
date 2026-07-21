@@ -10,6 +10,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { VISIT_TOTAL_COLUMN, countDetectedVisits } from '../utils/visit-markers';
 import { getCellValue, getFormattedCellValue, isSpreadsheetCell } from '../types/SpreadsheetCell';
+import { createVisualPreviewSample } from '../services/ImportService';
 
 function createWorkbook(rows: unknown[][]): ArrayBuffer {
   const workbook = XLSX.utils.book_new();
@@ -250,4 +251,18 @@ test('planilha mensal real detecta as 28 visitas e preserva a linha física', as
   assert.equal(excelRow12[VISIT_TOTAL_COLUMN], 2);
   assert.equal(excelRow12['05_06_2026'], '✓');
   assert.equal(excelRow12['26_06_2026'], '✓');
+});
+
+test('preview visual da planilha real mantém linhas inválidas e todas as 28 visitas', async () => {
+  const fixturePath = fileURLToPath(new URL('./fixtures/ao-quadrado-junho-2026.xlsx', import.meta.url));
+  const bytes = readFileSync(fixturePath);
+  const data = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
+  const strategy = new ExcelStrategy();
+  const rawData = await strategy.parse(data);
+  const normalizedData = await strategy.normalize(rawData);
+  const sample = createVisualPreviewSample(normalizedData);
+
+  assert.equal(sample.length, 27);
+  assert.equal(countDetectedVisits(sample), 28);
+  assert.equal(sample.filter((row) => Number(row[VISIT_TOTAL_COLUMN]) > 0).length, 14);
 });

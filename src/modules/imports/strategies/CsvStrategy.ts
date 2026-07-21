@@ -104,7 +104,7 @@ export class CsvStrategy implements ImportStrategy {
       validRows: uniqueData.length,
       invalidRows,
       duplicateRows: duplicates.length,
-      previewData: uniqueData.slice(0, 10),
+      previewData: uniqueData,
     };
   }
 

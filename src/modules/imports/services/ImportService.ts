@@ -12,6 +12,10 @@ export type PreviewResult = ImportPreview;
 export class UnsupportedImportFileError extends Error {}
 export class InvalidImportFileError extends Error {}
 
+export function createVisualPreviewSample(normalizedData: NormalizedImportRow[]): NormalizedImportRow[] {
+  return normalizedData.slice(0, 50);
+}
+
 // Define the import result type
 export interface ImportResult {
   success: boolean;
@@ -80,7 +84,7 @@ export class ImportService {
 
       // Generate preview data
       const preview = await strategy.generatePreview(unique, duplicates, invalidRows);
-      const sample = preview.previewData.slice(0, 50);
+      const sample = createVisualPreviewSample(normalizedData);
       const columns = normalizedData[0] ? Object.keys(normalizedData[0]) : [];
       const sheets = strategy.getSheetNames ? await strategy.getSheetNames(arrayBuffer) : [];
       const warnings: string[] = [];
