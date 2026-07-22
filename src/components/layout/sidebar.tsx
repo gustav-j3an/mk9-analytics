@@ -1,6 +1,6 @@
 'use client';
 
-import { Calendar, ChevronLeft, ChevronRight, ClipboardList, Factory, LayoutDashboard, Settings, Store, Upload, Users, X } from 'lucide-react';
+import { Calendar, ChevronLeft, ChevronRight, ClipboardCheck, ClipboardList, Factory, LayoutDashboard, Settings, Store, Upload, Users, X } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { NavItem } from './NavItem';
 
@@ -17,6 +17,7 @@ const sections = [
     items: [
       { href: '/dashboard/operacoes', label: 'Operações', icon: ClipboardList },
       { href: '/dashboard/roteiros', label: 'Roteiros', icon: Calendar },
+      { href: '/dashboard/conciliacao', label: 'Conciliação', icon: ClipboardCheck },
       { href: '/dashboard/visitas', label: 'Visitas', icon: Calendar },
       { href: '/dashboard/importacoes', label: 'Importações', icon: Upload },
     ],

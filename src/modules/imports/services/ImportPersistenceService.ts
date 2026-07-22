@@ -11,6 +11,9 @@ import type { PreviewArtifactPayload } from './ImportPreviewArtifactService';
 import { SpreadsheetType } from '../types/SpreadsheetType';
 import { WeeklyPlanner } from '@/modules/routes/planning/WeeklyPlanner';
 import { isVisitMarked } from '../utils/visit-markers';
+import { VisitMatchRepository } from '@/modules/reconciliation/VisitMatchRepository';
+import { VisitReconciliationService } from '@/modules/reconciliation/VisitReconciliationService';
+import type { EvidenceInput } from '@/modules/reconciliation/ReconciliationTypes';
 
 export interface ImportPersistenceSummary {
   createdStores: number;
@@ -49,10 +52,12 @@ export async function persistPreviewArtifact(
   if (!isRouteWorkbook && dateColumns.length === 0) throw new Error('O preview não contém colunas de datas persistíveis.');
 
   const fileName = text(payload.file.name) || 'Importação de roteiro';
+  const linkedImport = await tx.import.findUnique({ where: { id: artifact.importId }, include: { operation: true } });
   let operation: { id: string; startsAt: Date; endsAt: Date };
   if (isRouteWorkbook) {
-    const linkedImport = await tx.import.findUnique({ where: { id: artifact.importId }, include: { operation: true } });
     if (!linkedImport?.operation) throw new Error('Selecione uma operação antes de confirmar uma planilha de roteiro.');
+    operation = linkedImport.operation;
+  } else if (linkedImport?.operation) {
     operation = linkedImport.operation;
   } else {
     const firstDate = dateColumns[0].date as Date;
@@ -115,7 +120,10 @@ export async function persistPreviewArtifact(
     }
   }
 
-  const candidate = OperationMapper.map(stores, industries, promoters, visits);
+  // Checklists are evidence of execution. Only route workbooks create planned
+  // visits; evidence is reconciled against those visits after canonical entities
+  // have been persisted.
+  const candidate = OperationMapper.map(stores, industries, promoters, isRouteWorkbook ? visits : []);
   developmentLog('candidates', {
     stores: candidate.stores.length,
     industries: candidate.industries.length,
@@ -138,6 +146,36 @@ export async function persistPreviewArtifact(
     visitsToUpdate: plan.visitsToUpdate.length,
   });
   const result = await PersistenceEngine.persist(plan, operation.id, tx as never);
+  let reconciliationMatched = 0;
+  if (!isRouteWorkbook) {
+    const evidenceInputs: EvidenceInput[] = [];
+    for (const entry of payload.rows) {
+      const row = entry.data as Record<string, unknown>;
+      const markedDates = dateColumns.filter(({ column }) => isVisitMarked(row[column]));
+      for (const { date } of markedDates) {
+        evidenceInputs.push({
+          importId: artifact.importId,
+          operationId: operation.id,
+          evidenceDate: date as Date,
+          storeName: text(row.LOJA ?? row.NOME_LOJA ?? row.STORE),
+          // KING identifies the client industry by workbook layout; BANDEIRA is
+          // retained in rawIndustryName but must not be treated as the industry.
+          industryName: payload.detectedType === SpreadsheetType.KING_CHECKLIST ? 'KING' : text(row.INDUSTRIA),
+          sourceFile: fileName,
+          sourceSheet: text(payload.sheets[0]) || undefined,
+          sourceRow: entry.sourceRow ?? undefined,
+          state: text(row.UF) || undefined,
+          city: text(row.CIDADE) || undefined,
+          brand: text(row.BANDEIRA ?? row.INDUSTRIA) || undefined,
+          operationStartsAt: operation.startsAt,
+          operationEndsAt: operation.endsAt,
+        });
+      }
+    }
+    const reconciliation = await new VisitReconciliationService(new VisitMatchRepository(tx)).reconcileMany(evidenceInputs);
+    reconciliationMatched = reconciliation.matched;
+    developmentLog('reconciliation', { ...reconciliation });
+  }
 
   await tx.importFile.upsert({
     where: { fileHash: artifact.fileHash },
@@ -154,7 +192,7 @@ export async function persistPreviewArtifact(
     createdPromoters: result.createdPromoters,
     updatedPromoters: result.updatedPromoters,
     createdVisits: result.createdVisits,
-    updatedVisits: result.updatedVisits,
+    updatedVisits: result.updatedVisits + reconciliationMatched,
     ignoredDuplicates: candidate.statistics.duplicatedVisits + Number(payload.audit.duplicateRows ?? 0),
     ignoredInvalidRows: artifact.rejectedRows,
   };

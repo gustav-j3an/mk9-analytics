@@ -39,41 +39,46 @@ model Promoter {
 }
 
 model Industry {
-  id        String   @id @default(cuid())
-  code      String   @unique
+  id        String          @id @default(cuid())
+  code      String          @unique
   name      String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
   visits    Visit[]
+  aliases   IndustryAlias[]
+  evidences VisitEvidence[]
 }
 
 model Store {
-  id        String   @id @default(cuid())
-  code      String   @unique
+  id        String          @id @default(cuid())
+  code      String          @unique
   name      String
   chain     String?
   city      String?
   state     String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
   visits    Visit[]
+  aliases   StoreAlias[]
+  evidences VisitEvidence[]
 }
 
 model Visit {
-  id            String      @id @default(cuid())
+  id            String          @id @default(cuid())
   promoterId    String
   storeId       String
   industryId    String
-  status        VisitStatus @default(PLANEJADA)
+  status        VisitStatus     @default(PLANEJADA)
   scheduledDate DateTime
   completedDate DateTime?
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
   operationId   String
-  industry      Industry    @relation(fields: [industryId], references: [id])
-  operation     Operation   @relation(fields: [operationId], references: [id])
-  promoter      Promoter    @relation(fields: [promoterId], references: [id])
-  store         Store       @relation(fields: [storeId], references: [id])
+  industry      Industry        @relation(fields: [industryId], references: [id])
+  operation     Operation       @relation(fields: [operationId], references: [id])
+  promoter      Promoter        @relation(fields: [promoterId], references: [id])
+  store         Store           @relation(fields: [storeId], references: [id])
+  evidences     VisitEvidence[]
 }
 
 model Operation {
@@ -91,6 +96,7 @@ model Operation {
   observations String?
   visits       Visit[]
   imports      Import[]
+  evidences    VisitEvidence[]
 
   @@unique([month, year])
 }
@@ -105,8 +111,81 @@ model Import {
   confirmations    ImportConfirmation[]
   operationId      String?
   operation        Operation?              @relation(fields: [operationId], references: [id], onDelete: SetNull)
+  visitEvidences   VisitEvidence[]
 
   @@index([operationId])
+}
+
+model StoreAlias {
+  id        String   @id @default(cuid())
+  aliasKey  String   @unique
+  alias     String
+  storeId   String
+  createdAt DateTime @default(now())
+  store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@index([storeId])
+}
+
+model IndustryAlias {
+  id         String   @id @default(cuid())
+  aliasKey   String   @unique
+  alias      String
+  industryId String
+  createdAt  DateTime @default(now())
+  industry   Industry @relation(fields: [industryId], references: [id], onDelete: Cascade)
+
+  @@index([industryId])
+}
+
+model VisitEvidence {
+  id               String                @id @default(cuid())
+  importId         String
+  operationId      String
+  visitId          String?
+  storeId          String?
+  industryId       String?
+  evidenceDate     DateTime
+  sourceFile       String
+  sourceSheet      String?
+  sourceRow        Int?
+  rawStoreName     String
+  rawIndustryName  String
+  rawBrand         String?
+  rawCity          String?
+  rawState         String?
+  suggestion       Json?
+  diagnostics      Json?
+  deduplicationKey String                @unique
+  result           ReconciliationResult
+  confidence       Int                   @default(0)
+  reviewedAt       DateTime?
+  reviewedBy       String?
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+  import           Import                @relation(fields: [importId], references: [id], onDelete: Cascade)
+  operation        Operation             @relation(fields: [operationId], references: [id], onDelete: Cascade)
+  visit            Visit?                @relation(fields: [visitId], references: [id], onDelete: SetNull)
+  store            Store?                @relation(fields: [storeId], references: [id], onDelete: SetNull)
+  industry         Industry?             @relation(fields: [industryId], references: [id], onDelete: SetNull)
+  audits           ReconciliationAudit[]
+
+  @@index([operationId, evidenceDate])
+  @@index([visitId])
+  @@index([result])
+}
+
+model ReconciliationAudit {
+  id         String        @id @default(cuid())
+  evidenceId String
+  action     String
+  actor      String
+  before     Json?
+  after      Json?
+  createdAt  DateTime      @default(now())
+  evidence   VisitEvidence @relation(fields: [evidenceId], references: [id], onDelete: Cascade)
+
+  @@index([evidenceId])
 }
 
 model ImportFile {
@@ -120,9 +199,9 @@ model ImportFile {
 }
 
 model ImportPreviewArtifact {
-  id           String    @id @default(cuid())
+  id           String              @id @default(cuid())
   importId     String
-  tokenHash    String    @unique
+  tokenHash    String              @unique
   fileHash     String
   dataDigest   String
   payload      Json
@@ -130,8 +209,8 @@ model ImportPreviewArtifact {
   rejectedRows Int
   expiresAt    DateTime
   consumedAt   DateTime?
-  createdAt    DateTime  @default(now())
-  import       Import    @relation(fields: [importId], references: [id], onDelete: Cascade)
+  createdAt    DateTime            @default(now())
+  import       Import              @relation(fields: [importId], references: [id], onDelete: Cascade)
   confirmation ImportConfirmation?
 
   @@index([importId])
@@ -180,4 +259,14 @@ enum OperationStatus {
   FINISHED
   CANCELLED
   ARCHIVED
+}
+
+enum ReconciliationResult {
+  MATCHED
+  UNPLANNED
+  AMBIGUOUS
+  DATE_MISMATCH
+  STORE_NOT_FOUND
+  INDUSTRY_NOT_FOUND
+  DUPLICATE_EVIDENCE
 }
