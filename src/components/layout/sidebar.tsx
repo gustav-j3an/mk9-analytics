@@ -16,6 +16,7 @@ const sections = [
     title: 'OPERAÇÃO',
     items: [
       { href: '/dashboard/operacoes', label: 'Operações', icon: ClipboardList },
+      { href: '/dashboard/roteiros', label: 'Roteiros', icon: Calendar },
       { href: '/dashboard/visitas', label: 'Visitas', icon: Calendar },
       { href: '/dashboard/importacoes', label: 'Importações', icon: Upload },
     ],

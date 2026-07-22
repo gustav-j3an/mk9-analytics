@@ -8,6 +8,9 @@ import { PersistencePlanner } from '@/modules/persistence/PersistencePlanner';
 import { PersistenceEngine } from '@/modules/persistence/PersistenceEngine';
 import type { VisitCandidate } from '@/modules/mapping/visit/VisitCandidate';
 import type { PreviewArtifactPayload } from './ImportPreviewArtifactService';
+import { SpreadsheetType } from '../types/SpreadsheetType';
+import { WeeklyPlanner } from '@/modules/routes/planning/WeeklyPlanner';
+import { isVisitMarked } from '../utils/visit-markers';
 
 export interface ImportPersistenceSummary {
   createdStores: number;
@@ -41,20 +44,28 @@ export async function persistPreviewArtifact(
   artifact: { importId: string; fileHash: string; payload: Prisma.JsonValue; rejectedRows: number },
 ): Promise<ImportPersistenceSummary> {
   const payload = artifact.payload as unknown as PreviewArtifactPayload;
+  const isRouteWorkbook = payload.detectedType === SpreadsheetType.ROTEIRO_PROMOTORES;
   const dateColumns = payload.columns.map((column) => ({ column, date: dateFromColumn(column) })).filter((item) => item.date !== null);
-  if (dateColumns.length === 0) throw new Error('O preview não contém colunas de datas persistíveis.');
+  if (!isRouteWorkbook && dateColumns.length === 0) throw new Error('O preview não contém colunas de datas persistíveis.');
 
-  const firstDate = dateColumns[0].date as Date;
-  const year = firstDate.getUTCFullYear();
-  const month = firstDate.getUTCMonth() + 1;
-  const startsAt = new Date(Date.UTC(year, month - 1, 1, 12));
-  const endsAt = new Date(Date.UTC(year, month, 0, 12));
-  const fileName = text(payload.file.name) || `Importação ${month}/${year}`;
-  const operation = await tx.operation.upsert({
-    where: { month_year: { month, year } },
-    create: { name: fileName.replace(/\.[^.]+$/, ''), month, year, startsAt, endsAt, status: 'IN_PROGRESS' },
-    update: { name: fileName.replace(/\.[^.]+$/, ''), startsAt, endsAt, status: 'IN_PROGRESS' },
-  });
+  const fileName = text(payload.file.name) || 'Importação de roteiro';
+  let operation: { id: string; startsAt: Date; endsAt: Date };
+  if (isRouteWorkbook) {
+    const linkedImport = await tx.import.findUnique({ where: { id: artifact.importId }, include: { operation: true } });
+    if (!linkedImport?.operation) throw new Error('Selecione uma operação antes de confirmar uma planilha de roteiro.');
+    operation = linkedImport.operation;
+  } else {
+    const firstDate = dateColumns[0].date as Date;
+    const year = firstDate.getUTCFullYear();
+    const month = firstDate.getUTCMonth() + 1;
+    const startsAt = new Date(Date.UTC(year, month - 1, 1, 12));
+    const endsAt = new Date(Date.UTC(year, month, 0, 12));
+    operation = await tx.operation.upsert({
+      where: { month_year: { month, year } },
+      create: { name: fileName.replace(/\.[^.]+$/, ''), month, year, startsAt, endsAt, status: 'IN_PROGRESS' },
+      update: { name: fileName.replace(/\.[^.]+$/, ''), startsAt, endsAt, status: 'IN_PROGRESS' },
+    });
+  }
 
   const stores = [];
   const industries = [];
@@ -64,7 +75,7 @@ export async function persistPreviewArtifact(
   developmentLog('artifact', {
     importId: artifact.importId,
     validRows: payload.rows.length,
-    dateColumns: dateColumns.length,
+    dateColumns: isRouteWorkbook ? 7 : dateColumns.length,
     rejectedRows: artifact.rejectedRows,
   });
 
@@ -81,21 +92,26 @@ export async function persistPreviewArtifact(
     industries.push(industry);
     if (promoter) promoters.push(promoter);
 
-    const markedDates = dateColumns.filter(({ column }) => row[column] === '✓');
-    for (const { date } of markedDates) {
-      const scheduledDate = date as Date;
-      visits.push({
-        store,
-        industry,
-        promoter,
-        frequency: markedDates.length,
-        frequencyType: 'MONTHLY',
-        plannedVisitIndex: scheduledDate.getUTCDate(),
-        scheduledDate,
-        completed: true,
-        deduplicationKey: `VISIT:${store.code}:${industry.code}:${promoter?.normalizedName ?? 'NO_PROMOTER'}:${scheduledDate.toISOString().slice(0, 10)}`,
-        originalData: row,
-      });
+    if (isRouteWorkbook) {
+      if (!promoter) throw new Error(`Promotor ausente na linha ${String(entry.sourceRow ?? '')}.`);
+      visits.push(...WeeklyPlanner.plan({ row, store, industry, promoter }, operation));
+    } else {
+      const markedDates = dateColumns.filter(({ column }) => isVisitMarked(row[column]));
+      for (const { date } of markedDates) {
+        const scheduledDate = date as Date;
+        visits.push({
+          store,
+          industry,
+          promoter,
+          frequency: markedDates.length,
+          frequencyType: 'MONTHLY',
+          plannedVisitIndex: scheduledDate.getUTCDate(),
+          scheduledDate,
+          completed: true,
+          deduplicationKey: `VISIT:${store.code}:${industry.code}:${promoter?.normalizedName ?? 'NO_PROMOTER'}:${scheduledDate.toISOString().slice(0, 10)}`,
+          originalData: row,
+        });
+      }
     }
   }
 

@@ -37,6 +37,10 @@ export function validatePreviewRows(normalizedData: NormalizedImportRow[]): {
         }
       });
 
+      if ('ABA' in data && !hasValue(data.PROMOTOR)) {
+        rowErrors.push(createError(row, 'PROMOTOR', 'campo obrigatório não preenchido.', data));
+      }
+
       const isKingChecklistRow = 'REALIZADO' in data && 'AVISOS' in data
         && FREQUENCY_FIELDS.every((field) => typeof data[field] === 'number');
       const requiresFrequency = FREQUENCY_FIELDS.some((field) => field in data) && !isKingChecklistRow;

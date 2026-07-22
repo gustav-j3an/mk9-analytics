@@ -9,6 +9,7 @@ import { validatePreviewRows } from '../services/validate-preview-rows';
 import { getCellFormula, getCellValue, getFormattedCellValue, isSpreadsheetCell } from '../types/SpreadsheetCell';
 import { isDateColumnHeader, isVisitMarked, VISIT_TOTAL_COLUMN } from '../utils/visit-markers';
 import { isKingChecklistLayout, normalizeKingChecklist } from './KingChecklistLayout';
+import { detectedRouteSheetNames, isRouteWorkbookData, normalizeRouteWorkbook, parseRouteWorkbook } from './RoteiroPromotoresLayout';
 
 export class ExcelStrategy implements ImportStrategy {
   private isFilled(value: unknown): boolean {
@@ -62,6 +63,7 @@ export class ExcelStrategy implements ImportStrategy {
       return SpreadsheetType.DESCONHECIDO;
     }
 
+    if (isRouteWorkbookData(data)) return SpreadsheetType.ROTEIRO_PROMOTORES;
     if (isKingChecklistLayout(data)) return SpreadsheetType.KING_CHECKLIST;
     const headerRowIndex = this.findHeaderRowIndex(data);
     const headerRow = Array.isArray(data[headerRowIndex]) ? data[headerRowIndex] : [];
@@ -91,11 +93,15 @@ export class ExcelStrategy implements ImportStrategy {
   }
 
   async parse(data: ArrayBuffer): Promise<unknown[]> {
-    return await ExcelReaderService.readFileFromBuffer(Buffer.from(data));
+    const buffer = Buffer.from(data);
+    const routeWorkbook = parseRouteWorkbook(buffer);
+    return routeWorkbook ? [routeWorkbook] : await ExcelReaderService.readFileFromBuffer(buffer);
   }
 
   async getSheetNames(data: ArrayBuffer): Promise<string[]> {
-    return ExcelReaderService.getSheetNamesFromBuffer(Buffer.from(data));
+    const buffer = Buffer.from(data);
+    const routeWorkbook = parseRouteWorkbook(buffer);
+    return routeWorkbook ? detectedRouteSheetNames([routeWorkbook]) : ExcelReaderService.getSheetNamesFromBuffer(buffer);
   }
 
   async normalize(rawData: unknown[]): Promise<NormalizedImportRow[]> {
@@ -103,6 +109,7 @@ export class ExcelStrategy implements ImportStrategy {
       return [];
     }
 
+    if (isRouteWorkbookData(rawData)) return normalizeRouteWorkbook(rawData[0]);
     if (isKingChecklistLayout(rawData)) return normalizeKingChecklist(rawData).rows;
     const headerRowIndex = this.findHeaderRowIndex(rawData);
     const headerRow = Array.isArray(rawData[headerRowIndex]) ? rawData[headerRowIndex] : [];

@@ -116,6 +116,10 @@ export default function ImportCard({ onSuccess, operations = [] }: Props = {}) {
 
   const handleConfirm = async () => {
     if (!preview?.previewToken || confirming || confirmation) return;
+    if (preview.detectedType === 'ROTEIRO_PROMOTORES' && !operationId) {
+      setError('Selecione uma operação para gerar as datas do roteiro semanal.');
+      return;
+    }
     setConfirming(true);
     setError(null);
     try {

@@ -104,7 +104,9 @@ export class ImportService {
       const sample = createVisualPreviewSample(normalizedData, errors);
       const dataColumns = normalizedData[0] ? Object.keys(normalizedData[0]) : [];
       const columns = [PREVIEW_SOURCE_ROW_COLUMN, PREVIEW_STATUS_COLUMN, PREVIEW_ERRORS_COLUMN, ...dataColumns];
-      const dateColumnCount = dataColumns.filter((column) => /^\d{2}_\d{2}_\d{4}$/.test(column)).length;
+      const dateColumnCount = detectedType === SpreadsheetType.ROTEIRO_PROMOTORES
+        ? dataColumns.filter((column) => ['SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SAB', 'DOM'].includes(column)).length
+        : dataColumns.filter((column) => /^\d{2}_\d{2}_\d{4}$/.test(column)).length;
       const rowsWithVisits = normalizedData.filter((row) => Number(row.TOTAL_VISITAS_DETECTADAS) > 0).length;
       const sheets = strategy.getSheetNames ? await strategy.getSheetNames(arrayBuffer) : [];
       const warnings: string[] = [];
