@@ -34,7 +34,17 @@ export async function handleImportConfirmation(request: Request, confirm: Confir
     return NextResponse.json(result);
   } catch (error: unknown) {
     if (error instanceof ImportConfirmationError) return errorResponse(error.code, error.message, error.httpStatus);
-    return errorResponse('INVALID_PREVIEW_TOKEN', 'Não foi possível confirmar o preview.', 500);
+    const internalCode = error instanceof Error ? (error as Error & { code?: unknown }).code : undefined;
+    const details = error instanceof Error
+      ? {
+          name: error.name,
+          message: error.message,
+          stack: error.stack,
+          code: typeof internalCode === 'string' ? internalCode : undefined,
+        }
+      : { name: 'UnknownError', message: String(error), stack: undefined, code: undefined };
+    console.error('[imports:confirm] unexpected error', details);
+    return errorResponse('IMPORT_PERSISTENCE_FAILED', 'Não foi possível persistir a importação.', 500);
   }
 }
 

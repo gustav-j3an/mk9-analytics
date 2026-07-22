@@ -49,7 +49,11 @@ function transactionAdapter(tx: Prisma.TransactionClient): ConfirmationTransacti
   };
 }
 export const prismaConfirmationStore: ConfirmationStore = {
-  transaction: (work) => prisma.$transaction((tx) => work(transactionAdapter(tx)), { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }),
+  transaction: (work) => prisma.$transaction((tx) => work(transactionAdapter(tx)), {
+    isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+    maxWait: 10_000,
+    timeout: 60_000,
+  }),
   findConfirmationByKey: (key) => prisma.importConfirmation.findUnique({ where: { idempotencyKey: key }, include: confirmationInclude }),
   findConfirmationByArtifact: (artifactId) => prisma.importConfirmation.findUnique({ where: { previewArtifactId: artifactId }, include: confirmationInclude }),
   findArtifactByTokenHash: (tokenHash) => prisma.importPreviewArtifact.findUnique({ where: { tokenHash } }),

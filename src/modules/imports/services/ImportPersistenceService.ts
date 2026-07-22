@@ -26,6 +26,10 @@ function text(value: unknown): string {
   return value === null || value === undefined ? '' : String(value).trim();
 }
 
+function developmentLog(event: string, details: Record<string, unknown>): void {
+  if (process.env.NODE_ENV === 'development') console.info(`[imports:persistence] ${event}`, details);
+}
+
 function dateFromColumn(column: string): Date | null {
   const match = /^(\d{2})_(\d{2})_(\d{4})$/.exec(column);
   if (!match) return null;
@@ -56,6 +60,13 @@ export async function persistPreviewArtifact(
   const industries = [];
   const promoters = [];
   const visits: VisitCandidate[] = [];
+
+  developmentLog('artifact', {
+    importId: artifact.importId,
+    validRows: payload.rows.length,
+    dateColumns: dateColumns.length,
+    rejectedRows: artifact.rejectedRows,
+  });
 
   for (const entry of payload.rows) {
     const row = entry.data as Record<string, unknown>;
@@ -89,7 +100,27 @@ export async function persistPreviewArtifact(
   }
 
   const candidate = OperationMapper.map(stores, industries, promoters, visits);
+  developmentLog('candidates', {
+    stores: candidate.stores.length,
+    industries: candidate.industries.length,
+    promoters: candidate.promoters.length,
+    visits: candidate.visits.length,
+    duplicateStoresRemoved: candidate.statistics.duplicatedStores,
+    duplicateIndustriesRemoved: candidate.statistics.duplicatedIndustries,
+    duplicatePromotersRemoved: candidate.statistics.duplicatedPromoters,
+    duplicateVisitsRemoved: candidate.statistics.duplicatedVisits,
+  });
   const plan = await PersistencePlanner.plan(candidate, operation.id, tx as never);
+  developmentLog('plan', {
+    storesToCreate: plan.storesToCreate.length,
+    storesToUpdate: plan.storesToUpdate.length,
+    industriesToCreate: plan.industriesToCreate.length,
+    industriesToUpdate: plan.industriesToUpdate.length,
+    promotersToCreate: plan.promotersToCreate.length,
+    promotersToUpdate: plan.promotersToUpdate.length,
+    visitsToCreate: plan.visitsToCreate.length,
+    visitsToUpdate: plan.visitsToUpdate.length,
+  });
   const result = await PersistenceEngine.persist(plan, operation.id, tx as never);
 
   await tx.importFile.upsert({

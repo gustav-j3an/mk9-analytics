@@ -3,6 +3,18 @@ import type { Prisma, PrismaClient } from '@prisma/client';
 import type { PersistencePlan } from './PersistencePlan';
 import type { PersistenceResult } from './PersistenceResult';
 
+const WRITE_BATCH_SIZE = 200;
+
+function batches<T>(items: T[]): T[][] {
+  const result: T[][] = [];
+  for (let index = 0; index < items.length; index += WRITE_BATCH_SIZE) result.push(items.slice(index, index + WRITE_BATCH_SIZE));
+  return result;
+}
+
+function developmentLog(event: string, details: Record<string, unknown>): void {
+  if (process.env.NODE_ENV === 'development') console.info(`[imports:persistence-engine] ${event}`, details);
+}
+
 export class PersistenceEngine {
   static async persist(
     plan: PersistencePlan,
@@ -10,23 +22,35 @@ export class PersistenceEngine {
     prisma: PrismaClient = defaultPrisma as unknown as PrismaClient
   ): Promise<PersistenceResult> {
     const startTime = Date.now();
+    let lastEntity: { type: string; index: number } | null = null;
 
     const persistInTransaction = async (tx: Prisma.TransactionClient) => {
+      developmentLog('start', {
+        storesToCreate: plan.storesToCreate.length,
+        storesToUpdate: plan.storesToUpdate.length,
+        industriesToCreate: plan.industriesToCreate.length,
+        industriesToUpdate: plan.industriesToUpdate.length,
+        promotersToCreate: plan.promotersToCreate.length,
+        promotersToUpdate: plan.promotersToUpdate.length,
+        visitsToCreate: plan.visitsToCreate.length,
+        visitsToUpdate: plan.visitsToUpdate.length,
+      });
       // 1. Persistir Lojas
-      for (const store of plan.storesToCreate) {
-        await tx.store.create({
-          data: {
+      const storesToCreate = plan.storesToCreate.map((store) => ({
             code: store.code,
             name: store.name,
             chain: store.chain,
             city: store.city,
             state: store.state,
-          },
-        });
+      }));
+      for (const [index, batch] of batches(storesToCreate).entries()) {
+        lastEntity = { type: 'store.createMany', index };
+        await tx.store.createMany({ data: batch, skipDuplicates: true });
       }
 
-      for (const store of plan.storesToUpdate) {
-        await tx.store.update({
+      for (const [index, store] of plan.storesToUpdate.entries()) {
+        lastEntity = { type: 'store.updateMany', index };
+        await tx.store.updateMany({
           where: { code: store.code },
           data: {
             name: store.name,
@@ -38,17 +62,18 @@ export class PersistenceEngine {
       }
 
       // 2. Persistir Indústrias
-      for (const ind of plan.industriesToCreate) {
-        await tx.industry.create({
-          data: {
+      const industriesToCreate = plan.industriesToCreate.map((ind) => ({
             code: ind.code,
             name: ind.name,
-          },
-        });
+      }));
+      for (const [index, batch] of batches(industriesToCreate).entries()) {
+        lastEntity = { type: 'industry.createMany', index };
+        await tx.industry.createMany({ data: batch, skipDuplicates: true });
       }
 
-      for (const ind of plan.industriesToUpdate) {
-        await tx.industry.update({
+      for (const [index, ind] of plan.industriesToUpdate.entries()) {
+        lastEntity = { type: 'industry.updateMany', index };
+        await tx.industry.updateMany({
           where: { code: ind.code },
           data: {
             name: ind.name,
@@ -81,6 +106,7 @@ export class PersistenceEngine {
       );
 
       if (missingSupervisors.length > 0) {
+        lastEntity = { type: 'supervisor.createMany', index: 0 };
         await tx.supervisor.createMany({
           data: missingSupervisors.map((name) => ({ name })),
         });
@@ -101,19 +127,18 @@ export class PersistenceEngine {
         dbPromotersToUpdate.map((p: any) => [p.name.toUpperCase(), p.id])
       );
 
-      for (const promoter of plan.promotersToCreate) {
+      const promotersToCreate = plan.promotersToCreate.map((promoter) => {
         const supervisorName = promoter.supervisor || 'SUPERVISOR PADRÃO';
         const supervisorId = supervisorMap.get(supervisorName.toUpperCase()) || '';
-
-        await tx.promoter.create({
-          data: {
-            name: promoter.name,
-            supervisorId,
-          },
-        });
+        return { name: promoter.name, supervisorId };
+      });
+      for (const [index, batch] of batches(promotersToCreate).entries()) {
+        lastEntity = { type: 'promoter.createMany', index };
+        await tx.promoter.createMany({ data: batch, skipDuplicates: true });
       }
 
-      for (const promoter of plan.promotersToUpdate) {
+      for (const [index, promoter] of plan.promotersToUpdate.entries()) {
+        lastEntity = { type: 'promoter.update', index };
         const supervisorName = promoter.supervisor || 'SUPERVISOR PADRÃO';
         const supervisorId = supervisorMap.get(supervisorName.toUpperCase()) || '';
         const promoterId = dbPromotersToUpdateMap.get(promoter.name.toUpperCase());
@@ -179,6 +204,7 @@ export class PersistenceEngine {
         });
         if (!defaultPromoter) {
           const defaultSupId = supervisorMap.get('SUPERVISOR PADRÃO') || '';
+          lastEntity = { type: 'promoter.default.create', index: 0 };
           defaultPromoter = await tx.promoter.create({
             data: {
               name: 'PROMOTOR PADRÃO',
@@ -191,7 +217,7 @@ export class PersistenceEngine {
       }
 
       // 5. Persistir Visitas Criadas
-      for (const cv of plan.visitsToCreate) {
+      const visitsToCreate: Prisma.VisitCreateManyInput[] = plan.visitsToCreate.map((cv, index) => {
         const storeId = storeMap.get(cv.store.code);
         const industryId = industryMap.get(cv.industry.code);
         let promoterId = cv.promoter ? promoterMap.get(cv.promoter.name.toUpperCase()) : null;
@@ -208,18 +234,21 @@ export class PersistenceEngine {
 
         const scheduledDate = cv.scheduledDate ? new Date(cv.scheduledDate) : new Date(operation.startsAt);
         if (!cv.scheduledDate) scheduledDate.setDate(scheduledDate.getDate() + (cv.plannedVisitIndex - 1));
-
-        await tx.visit.create({
-          data: {
+        if (Number.isNaN(scheduledDate.getTime())) throw new Error(`Data inválida no candidato de visita ${index}.`);
+        if (!promoterId) throw new Error(`Promotor não resolvido no candidato de visita ${index}.`);
+        return {
             operationId,
             storeId,
             industryId,
-            promoterId: promoterId || '',
+            promoterId,
             scheduledDate,
             status: cv.completed ? 'REALIZADA' : 'PLANEJADA',
             completedDate: cv.completed ? scheduledDate : null,
-          },
-        });
+        };
+      });
+      for (const [index, batch] of batches(visitsToCreate).entries()) {
+        lastEntity = { type: 'visit.createMany', index };
+        await tx.visit.createMany({ data: batch });
       }
 
       // 6. Persistir Visitas Atualizadas
@@ -228,7 +257,8 @@ export class PersistenceEngine {
         include: { store: true, industry: true, promoter: true },
       });
 
-      for (const cv of plan.visitsToUpdate) {
+      const visitUpdateGroups = new Map<string, { ids: string[]; promoterId: string; completedDate: Date | null; status: 'REALIZADA' | 'PLANEJADA' }>();
+      for (const [index, cv] of plan.visitsToUpdate.entries()) {
         const storeCode = cv.store.code;
         const industryCode = cv.industry.code;
         const promoterName = cv.promoter?.name?.toUpperCase() || 'NO_PROMOTER';
@@ -249,21 +279,31 @@ export class PersistenceEngine {
           if (!promoterId) {
             promoterId = defaultPromoterId;
           }
-
-          await tx.visit.update({
-            where: { id: existingVisit.id },
-            data: {
-              promoterId,
-              status: cv.completed ? 'REALIZADA' : 'PLANEJADA',
-              completedDate: cv.completed ? targetDate : null,
-            },
-          });
+          if (!promoterId) throw new Error(`Promotor não resolvido no candidato de atualização ${index}.`);
+          if (Number.isNaN(targetDate.getTime())) throw new Error(`Data inválida no candidato de atualização ${index}.`);
+          const status = cv.completed ? 'REALIZADA' as const : 'PLANEJADA' as const;
+          const completedDate = cv.completed ? targetDate : null;
+          const groupKey = `${promoterId}:${status}:${completedDate?.toISOString() ?? 'NULL'}`;
+          let group = visitUpdateGroups.get(groupKey);
+          if (!group) {
+            group = { ids: [], promoterId, completedDate, status };
+            visitUpdateGroups.set(groupKey, group);
+          }
+          group.ids.push(existingVisit.id);
         }
+      }
+
+      for (const [index, group] of [...visitUpdateGroups.values()].entries()) {
+        lastEntity = { type: 'visit.updateMany', index };
+        await tx.visit.updateMany({
+          where: { id: { in: group.ids } },
+          data: { promoterId: group.promoterId, status: group.status, completedDate: group.completedDate },
+        });
       }
 
       const durationMs = Date.now() - startTime;
 
-      return {
+      const result = {
         createdStores: plan.storesToCreate.length,
         updatedStores: plan.storesToUpdate.length,
         createdIndustries: plan.industriesToCreate.length,
@@ -274,11 +314,22 @@ export class PersistenceEngine {
         updatedVisits: plan.visitsToUpdate.length,
         durationMs,
       };
+      developmentLog('complete', result);
+      return result;
     };
 
-    if ('$transaction' in prisma && typeof prisma.$transaction === 'function') {
-      return prisma.$transaction((tx) => persistInTransaction(tx));
+    try {
+      if ('$transaction' in prisma && typeof prisma.$transaction === 'function') {
+        return await prisma.$transaction((tx) => persistInTransaction(tx));
+      }
+      return await persistInTransaction(prisma as unknown as Prisma.TransactionClient);
+    } catch (error) {
+      developmentLog('failed', {
+        lastEntity,
+        name: error instanceof Error ? error.name : 'UnknownError',
+        message: error instanceof Error ? error.message : String(error),
+      });
+      throw error;
     }
-    return persistInTransaction(prisma as unknown as Prisma.TransactionClient);
   }
 }

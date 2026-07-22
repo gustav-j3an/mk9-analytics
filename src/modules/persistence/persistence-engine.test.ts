@@ -83,12 +83,21 @@ class MockDatabase {
 const createPrismaMock = (db: MockDatabase) => {
   const txMock = {
     store: {
+      createMany: async (args: any) => {
+        for (const data of args.data) db.stores.push({ id: `s-${db.stores.length + 1}`, ...data });
+        return { count: args.data.length };
+      },
       create: async (args: any) => {
         db.stores.push({ id: `s-${db.stores.length + 1}`, ...args.data });
       },
       update: async (args: any) => {
         const item = db.stores.find((s) => s.code === args.where.code);
         if (item) Object.assign(item, args.data);
+      },
+      updateMany: async (args: any) => {
+        const item = db.stores.find((s) => s.code === args.where.code);
+        if (item) Object.assign(item, args.data);
+        return { count: item ? 1 : 0 };
       },
       findMany: async (args: any) => {
         if (args?.where?.code?.in) {
@@ -98,12 +107,21 @@ const createPrismaMock = (db: MockDatabase) => {
       },
     },
     industry: {
+      createMany: async (args: any) => {
+        for (const data of args.data) db.industries.push({ id: `i-${db.industries.length + 1}`, ...data });
+        return { count: args.data.length };
+      },
       create: async (args: any) => {
         db.industries.push({ id: `i-${db.industries.length + 1}`, ...args.data });
       },
       update: async (args: any) => {
         const item = db.industries.find((i) => i.code === args.where.code);
         if (item) Object.assign(item, args.data);
+      },
+      updateMany: async (args: any) => {
+        const item = db.industries.find((i) => i.code === args.where.code);
+        if (item) Object.assign(item, args.data);
+        return { count: item ? 1 : 0 };
       },
       findMany: async (args: any) => {
         if (args?.where?.code?.in) {
@@ -131,6 +149,10 @@ const createPrismaMock = (db: MockDatabase) => {
       },
     },
     promoter: {
+      createMany: async (args: any) => {
+        for (const data of args.data) db.promoters.push({ id: `p-${db.promoters.length + 1}`, ...data });
+        return { count: args.data.length };
+      },
       create: async (args: any) => {
         const p = { id: `p-${db.promoters.length + 1}`, ...args.data };
         db.promoters.push(p);
@@ -156,6 +178,15 @@ const createPrismaMock = (db: MockDatabase) => {
       },
     },
     visit: {
+      createMany: async (args: any) => {
+        for (const data of args.data) {
+          const store = db.stores.find((s) => s.id === data.storeId);
+          const industry = db.industries.find((i) => i.id === data.industryId);
+          const promoter = db.promoters.find((p) => p.id === data.promoterId);
+          db.visits.push({ id: `v-${db.visits.length + 1}`, ...data, store, industry, promoter });
+        }
+        return { count: args.data.length };
+      },
       create: async (args: any) => {
         const store = db.stores.find((s) => s.id === args.data.storeId);
         const industry = db.industries.find((i) => i.id === args.data.industryId);
@@ -176,6 +207,12 @@ const createPrismaMock = (db: MockDatabase) => {
             item.promoter = db.promoters.find((p) => p.id === args.data.promoterId);
           }
         }
+      },
+      updateMany: async (args: any) => {
+        const ids = args.where.id.in as string[];
+        const matches = db.visits.filter((visit) => ids.includes(visit.id));
+        for (const item of matches) Object.assign(item, args.data);
+        return { count: matches.length };
       },
       findMany: async (args: any) => {
         return db.visits.filter((v) => v.operationId === args.where.operationId);

@@ -1,8 +1,12 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import { randomBytes } from 'node:crypto';
+import path from 'node:path';
 import test from 'node:test';
 import { hashSha256 } from './ImportPreviewArtifactService';
 import { confirmImportPreview, ImportConfirmationError, type ArtifactRecord, type ConfirmationRecord, type ConfirmationStore, type ConfirmationTransaction } from './ImportConfirmationService';
+import { ExcelStrategy } from '../strategies/ExcelStrategy';
+import { countDetectedVisits } from '../utils/visit-markers';
 
 const tokenA = randomBytes(32).toString('base64url');
 const tokenB = randomBytes(32).toString('base64url');
@@ -21,6 +25,7 @@ class MemoryStore implements ConfirmationStore {
   operationalWrites = 0;
   existingOperations = new Set(['operation-1']);
   linkedImports = new Map<string, string>();
+  persistenceResult = { createdStores: 1, updatedStores: 0, createdIndustries: 1, updatedIndustries: 0, createdPromoters: 0, updatedPromoters: 0, createdVisits: 3, updatedVisits: 0, ignoredDuplicates: 0, ignoredInvalidRows: 1 };
 
   async transaction<T>(work: (transaction: ConfirmationTransaction) => Promise<T>): Promise<T> {
     const artifactsSnapshot = structuredClone(this.artifacts);
@@ -52,7 +57,7 @@ class MemoryStore implements ConfirmationStore {
       },
       persistArtifact: async () => {
         this.operationalWrites += 1;
-        return { createdStores: 1, updatedStores: 0, createdIndustries: 1, updatedIndustries: 0, createdPromoters: 0, updatedPromoters: 0, createdVisits: 3, updatedVisits: 0, ignoredDuplicates: 0, ignoredInvalidRows: 1 };
+        return this.persistenceResult;
       },
       linkImportToOperation: async (importId, operationId) => {
         if (!this.existingOperations.has(operationId)) return false;
@@ -162,4 +167,41 @@ test('reverte persistência operacional quando a confirmação falha', async () 
   store.failCreate = true;
   await assert.rejects(confirmImportPreview({ previewToken: tokenA, idempotencyKey: keyA }, store, now));
   assert.equal(store.operationalWrites, 0);
+});
+
+test('confirma o fixture KING real uma vez e preserva rollback e idempotência', async () => {
+  const fixturePath = path.join(process.cwd(), 'test-fixtures', 'KING CHECKLIST JUNHO 2026.xlsx');
+  const file = fs.readFileSync(fixturePath);
+  const arrayBuffer = file.buffer.slice(file.byteOffset, file.byteOffset + file.byteLength) as ArrayBuffer;
+  const strategy = new ExcelStrategy();
+  const rows = await strategy.normalize(await strategy.parse(arrayBuffer));
+  const validation = await strategy.validate(rows);
+  assert.equal(validation.valid.length, 141);
+  assert.equal(countDetectedVisits(rows), 363);
+
+  const token = randomBytes(32).toString('base64url');
+  const idempotencyKey = '550e8400-e29b-41d4-a716-446655440010';
+  const kingArtifact = artifact('king-real', token);
+  kingArtifact.acceptedRows = validation.valid.length;
+  kingArtifact.rejectedRows = 0;
+  kingArtifact.payload = JSON.parse(JSON.stringify({ rows: validation.valid.map((data) => ({ data })) }));
+  const store = new MemoryStore();
+  store.artifacts.set('king-real', kingArtifact);
+  store.persistenceResult = { ...store.persistenceResult, createdStores: 136, updatedStores: 5, createdIndustries: 11, createdVisits: 363, ignoredInvalidRows: 0 };
+
+  const first = await confirmImportPreview({ previewToken: token, idempotencyKey }, store, now);
+  const second = await confirmImportPreview({ previewToken: token, idempotencyKey }, store, now);
+  assert.equal(first.status, 'CONFIRMED');
+  assert.equal(first.persistence?.createdVisits, 363);
+  assert.equal(second.status, 'ALREADY_CONFIRMED');
+  assert.equal(store.operationalWrites, 1);
+
+  const rollbackStore = new MemoryStore();
+  const rollbackArtifact = structuredClone(kingArtifact);
+  rollbackArtifact.consumedAt = null;
+  rollbackStore.artifacts.set('king-real', rollbackArtifact);
+  rollbackStore.failCreate = true;
+  await assert.rejects(confirmImportPreview({ previewToken: token, idempotencyKey }, rollbackStore, now));
+  assert.equal(rollbackStore.artifacts.get('king-real')?.consumedAt, null);
+  assert.equal(rollbackStore.operationalWrites, 0);
 });

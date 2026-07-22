@@ -48,7 +48,8 @@ export type ImportConfirmationErrorCode =
   | 'PREVIEW_EXPIRED'
   | 'PREVIEW_ALREADY_CONSUMED'
   | 'IDEMPOTENCY_CONFLICT'
-  | 'OPERATION_NOT_FOUND';
+  | 'OPERATION_NOT_FOUND'
+  | 'IMPORT_PERSISTENCE_FAILED';
 
 export interface ImportConfirmationErrorResponse {
   success: false;
