@@ -5,7 +5,7 @@ import { ReconciliationReprocessService } from '@/modules/reconciliation/Reconci
 import { canonicalize } from '@/modules/shared/normalization';
 
 type Body = {
-  action: 'LINK' | 'UNPLANNED' | 'UNDO' | 'SAVE_ALIAS' | 'REPROCESS' | 'CORRECT';
+  action: 'LINK' | 'UNPLANNED' | 'UNDO' | 'SAVE_ALIAS' | 'CHANGE_STORE' | 'REPROCESS' | 'CORRECT';
   visitId?: string;
   storeId?: string;
   industryId?: string;
@@ -32,6 +32,15 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
           update: { alias: current.rawStoreName, storeId: body.storeId },
         });
         return ReconciliationReprocessService.reprocess(id, tx);
+      }
+      if (body.action === 'CHANGE_STORE') {
+        if (!body.storeId) throw new Error('STORE_REQUIRED');
+        const store = await tx.store.findUnique({ where: { id: body.storeId } });
+        if (!store) throw new Error('STORE_NOT_FOUND');
+        return tx.visitEvidence.update({
+          where: { id },
+          data: { storeId: store.id, visitId: null, result: 'UNPLANNED', confidence: 100, reviewedAt: new Date(), reviewedBy: 'ADMIN' },
+        });
       }
       if (body.action === 'CORRECT') {
         if (body.industryId) {

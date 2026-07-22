@@ -10,7 +10,7 @@ export const FilterBar = ({ children, clearUrl = '', className = '', ...props }:
   return (
     <form
       method="GET"
-      className={`bg-white border border-gray-100 rounded-2xl p-4 shadow-xs flex flex-col gap-4 mb-6 ${className}`}
+      className={`filter-bar rounded-2xl border p-4 flex flex-col gap-4 mb-6 ${className}`}
       {...props}
     >
       <div className="flex items-center gap-2 pb-2 border-b border-gray-50">
@@ -33,7 +33,7 @@ export const FilterBar = ({ children, clearUrl = '', className = '', ...props }:
         )}
         <button
           type="submit"
-          className="bg-green-600 hover:bg-green-700 text-white font-medium text-sm px-5 py-2 rounded-xl transition-colors focus:outline-none focus:ring-2 focus:ring-green-500"
+          className="standard-button"
         >
           Filtrar
         </button>

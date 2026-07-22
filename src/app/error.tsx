@@ -1,0 +1,3 @@
+'use client';
+import { AlertTriangle } from 'lucide-react';
+export default function ErrorPage({ reset }: { error: Error & { digest?: string }; reset: () => void }) { return <main className="error-page"><div className="error-code">500</div><AlertTriangle /><h1>Não foi possível carregar esta página</h1><p>Ocorreu um erro inesperado. Tente novamente; seus dados não foram alterados.</p><button className="standard-button" onClick={reset}>Tentar novamente</button></main>; }

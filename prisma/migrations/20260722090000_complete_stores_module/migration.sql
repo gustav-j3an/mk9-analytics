@@ -1,0 +1,2 @@
+ALTER TABLE "Store" ADD COLUMN "address" TEXT;
+ALTER TABLE "Store" ADD COLUMN "archivedAt" TIMESTAMP(3);

@@ -1,0 +1,4 @@
+import { z } from 'zod';
+export const promoterSchema=z.object({name:z.string().trim().min(1,'Nome é obrigatório').max(255),phone:z.string().trim().max(30).optional().nullable(),email:z.union([z.string().trim().email('Email inválido'),z.literal(''),z.null()]).optional().transform(v=>v||null),city:z.string().trim().max(100).optional().nullable(),state:z.union([z.string().trim().length(2,'UF deve ter 2 letras').transform(v=>v.toUpperCase()),z.literal(''),z.null()]).optional().transform(v=>v||null),operationId:z.string().cuid().optional().nullable(),status:z.enum(['ACTIVE','INACTIVE']).default('ACTIVE'),supervisorId:z.string().cuid('Supervisor inválido')});
+export const promoterUpdateSchema=promoterSchema.partial();
+export const validatePromoterData=(data:unknown)=>promoterSchema.parse(data);export const validatePromoterUpdateData=(data:unknown)=>promoterUpdateSchema.parse(data);

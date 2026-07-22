@@ -39,11 +39,11 @@ export function DataTable<T>({
   }
 
   return (
-    <div className="bg-white border border-[#F4F4F5] rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.01),_0_1px_2px_rgba(0,0,0,0.005)] overflow-hidden">
+    <div className="standard-table overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse">
           <thead>
-            <tr className="border-b border-[#F4F4F5] bg-white">
+            <tr className="border-b">
               {columns.map((col, idx) => {
                 const alignStyles = {
                   left: 'text-left',
@@ -63,9 +63,9 @@ export function DataTable<T>({
               })}
             </tr>
           </thead>
-          <tbody className="divide-y divide-[#F4F4F5]">
+          <tbody className="divide-y">
             {data.map((row, rowIdx) => (
-              <tr key={rowIdx} className="hover:bg-[#FAFAFA] transition-colors duration-150">
+              <tr key={rowIdx} className="transition-colors duration-150">
                 {columns.map((col, colIdx) => {
                   const alignStyles = {
                     left: 'text-left',
@@ -89,7 +89,7 @@ export function DataTable<T>({
         </table>
       </div>
       {pagination && (
-        <div className="px-5 py-3.5 border-t border-[#F4F4F5] bg-white">
+        <div className="px-5 py-3.5 border-t">
           <Pagination
             currentPage={pagination.currentPage}
             totalPages={pagination.totalPages}

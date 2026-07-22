@@ -1,23 +1,5 @@
-import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-
-export async function GET() {
-    const promoters = await prisma.promoter.findMany({
-        include: { supervisor: true },
-        orderBy: { name: "asc" },
-    });
-    return NextResponse.json(promoters);
-}
-
-export async function POST(req: Request) {
-    const body = await req.json();
-    const promoter = await prisma.promoter.create({
-        data: {
-            name: body.name,
-            city: body.city,
-            state: body.state,
-            supervisorId: body.supervisorId,
-        },
-    });
-    return NextResponse.json(promoter);
-}
+import { NextResponse } from 'next/server';
+import { promoterService } from '@/modules/promoters/services/PromoterService';
+export async function GET(request:Request){const q=new URL(request.url).searchParams;return NextResponse.json(await promoterService.getPromoters({search:q.get('search')||undefined,state:q.get('state')||undefined,supervisorId:q.get('supervisorId')||undefined,operationId:q.get('operationId')||undefined,visibility:(q.get('visibility')||'active') as 'active'|'archived'|'deleted'|'all'}))}
+export async function POST(request:Request){try{return NextResponse.json(await promoterService.createPromoter(await request.json()),{status:201})}catch(error){const value=error as Error&{status?:number};return NextResponse.json({error:value.message},{status:value.status||400})}}
+export const dynamic='force-dynamic';

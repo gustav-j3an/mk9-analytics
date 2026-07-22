@@ -1,6 +1,6 @@
 'use client';
 
-import { Calendar, ChevronLeft, ChevronRight, ClipboardCheck, ClipboardList, Factory, LayoutDashboard, Settings, Store, Upload, Users, X } from 'lucide-react';
+import { Calendar, ChevronLeft, ChevronRight, ClipboardCheck, ClipboardList, Factory, LayoutDashboard, Store, Upload, Users, X } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { NavItem } from './NavItem';
 
@@ -29,15 +29,13 @@ const sections = [
       { href: '/dashboard/lojas', label: 'Lojas', icon: Store },
       { href: '/dashboard/industrias', label: 'Indústrias', icon: Factory },
     ],
-  },
-  { title: 'ADMINISTRAÇÃO', items: [{ href: '/dashboard/configuracoes', label: 'Configurações', icon: Settings }] },
-];
+  },];
 
 export function Sidebar({ collapsed = false, onToggleCollapse = () => {}, onCloseMobile = () => {} }: SidebarProps) {
   const pathname = usePathname();
 
   return (
-    <div className="flex h-full flex-col border-r border-black bg-[#1b1b1a] py-4">
+    <div className="sidebar flex h-full flex-col border-r py-4">
       <div className="mb-5 flex items-center justify-between border-b border-white/[0.07] px-4 pb-4">
         <div className="flex items-center gap-2.5">
           <div className="flex h-7 w-7 items-center justify-center rounded bg-white text-[11px] font-bold text-[#1b1b1a]">MK</div>
@@ -52,7 +50,7 @@ export function Sidebar({ collapsed = false, onToggleCollapse = () => {}, onClos
             {!collapsed && <span className="mb-1.5 block px-3 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#60605c]">{section.title}</span>}
             {section.items.map((item) => {
               const Icon = item.icon;
-              return <NavItem key={item.href} href={item.href} label={item.label} icon={<Icon className="h-4 w-4" />} active={pathname === item.href} collapsed={collapsed} />;
+              return <NavItem key={item.href} href={item.href} label={item.label} icon={<Icon className="h-4 w-4" />} active={pathname === item.href || Boolean(pathname?.startsWith(item.href + '/'))} collapsed={collapsed} />;
             })}
           </div>
         ))}

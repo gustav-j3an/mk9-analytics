@@ -1,44 +1,4 @@
-'use client';
-
-import { useRouter } from 'next/navigation';
-import { useState } from 'react';
-
-interface Props {
-  evidenceId: string;
-  stores: Array<{ id: string; name: string }>;
-  industries: Array<{ id: string; name: string }>;
-  operations: Array<{ id: string; name: string }>;
-  suggestedVisitId?: string;
-  enabled: boolean;
-}
-
-export function ReconciliationActions(props: Props) {
-  const router = useRouter();
-  const [storeId, setStoreId] = useState('');
-  const [industryId, setIndustryId] = useState('');
-  const [operationId, setOperationId] = useState('');
-  const [evidenceDate, setEvidenceDate] = useState('');
-  async function act(action: string, extra: Record<string, string> = {}) {
-    const fields = Object.fromEntries(Object.entries(extra).filter((entry) => entry[1]));
-    const response = await fetch('/api/reconciliation/' + props.evidenceId, {
-      method: 'PATCH', headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ action, ...fields }),
-    });
-    if (response.ok) router.refresh();
-  }
-  if (!props.enabled) return <small>Acoes bloqueadas sem autenticacao.</small>;
-  return <div>
-    <select value={storeId} onChange={(event) => setStoreId(event.target.value)}>
-      <option value={''}>Loja canonica</option>
-      {props.stores.map((store) => <option key={store.id} value={store.id}>{store.name}</option>)}
-    </select>
-    <button onClick={() => act('SAVE_ALIAS', { storeId })}>Salvar alias</button>
-    <select value={industryId} onChange={(event) => setIndustryId(event.target.value)}><option value={''}>Industria</option>{props.industries.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select>
-    <select value={operationId} onChange={(event) => setOperationId(event.target.value)}><option value={''}>Operacao</option>{props.operations.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select>
-    <input type={'date'} value={evidenceDate} onChange={(event) => setEvidenceDate(event.target.value)}></input>
-    <button onClick={() => act('CORRECT', { industryId, operationId, evidenceDate })}>Corrigir e reprocessar</button>
-    <button onClick={() => act('REPROCESS')}>Reprocessar</button>
-    <button onClick={() => act('UNPLANNED')}>Fora do roteiro</button>
-    {props.suggestedVisitId ? <button onClick={() => act('LINK', { visitId: props.suggestedVisitId ?? '' })}>Vincular sugestao</button> : null}
-  </div>;
-}
+'use client';import{useState}from'react';import{useRouter}from'next/navigation';
+type Store={id:string;name:string;state:string|null;city:string|null};type Props={evidenceId:string;stores:Store[];suggestedVisitId?:string;enabled:boolean;diagnostics:unknown;suggestion:unknown;source:{file:string;sheet:string|null;row:number|null;rawStore:string;rawIndustry:string;city:string|null;state:string|null}};
+export function ReconciliationActions(p:Props){const router=useRouter();const[storeId,setStoreId]=useState('');const[drawer,setDrawer]=useState(false);const[loading,setLoading]=useState('');const[error,setError]=useState('');async function act(action:string,extra:Record<string,string>={}){setLoading(action);setError('');const response=await fetch(`/api/reconciliation/${p.evidenceId}`,{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({action,...extra})});const result=await response.json();setLoading('');if(!response.ok){setError(result.error||'Falha na ação.');return}router.refresh()}return <><div className="flex min-w-[360px] flex-col gap-2"><select value={storeId} onChange={e=>setStoreId(e.target.value)} className="h-8 rounded border px-2 text-xs"><option value="">Selecionar loja canônica</option>{p.stores.map(x=><option key={x.id} value={x.id}>{x.name} · {x.city||'-'}/{x.state||'-'}</option>)}</select><div className="flex flex-wrap gap-1.5">{p.suggestedVisitId&&<Button disabled={!p.enabled} onClick={()=>act('LINK',{visitId:p.suggestedVisitId||''})}>Aceitar sugestão</Button>}<Button disabled={!p.enabled||!storeId} onClick={()=>act('CHANGE_STORE',{storeId})}>Trocar loja</Button><Button disabled={!p.enabled||!storeId} onClick={()=>act('SAVE_ALIAS',{storeId})}>Criar alias</Button><Button disabled={!p.enabled} onClick={()=>act('UNPLANNED')}>Ignorar</Button><Button disabled={!p.enabled} onClick={()=>act('REPROCESS')}>{loading==='REPROCESS'?'Processando...':'Reprocessar'}</Button><Button onClick={()=>setDrawer(true)}>Diagnóstico</Button></div>{!p.enabled&&<small className="text-amber-700">Ações bloqueadas sem autenticação administrativa.</small>}{error&&<small className="text-red-700">{error}</small>}</div>{drawer&&<div className="fixed inset-0 z-50 bg-black/30" onClick={()=>setDrawer(false)}><aside className="ml-auto h-full w-full max-w-xl overflow-y-auto bg-white p-6 shadow-2xl" onClick={e=>e.stopPropagation()}><div className="mb-5 flex items-center justify-between"><div><p className="text-[10px] uppercase text-[#777772]">Diagnóstico completo</p><h2 className="text-lg font-semibold">{p.source.rawStore}</h2></div><button onClick={()=>setDrawer(false)} className="rounded border px-3 py-1.5 text-xs">Fechar</button></div><dl className="grid gap-3 text-sm sm:grid-cols-2"><Info label="Arquivo" value={p.source.file}/><Info label="Aba / linha" value={`${p.source.sheet||'-'} / ${p.source.row||'-'}`}/><Info label="Loja original" value={p.source.rawStore}/><Info label="Indústria original" value={p.source.rawIndustry}/><Info label="Cidade / UF" value={`${p.source.city||'-'} / ${p.source.state||'-'}`}/></dl><Json title="Sugestão" value={p.suggestion}/><Json title="Candidatos e rejeições" value={p.diagnostics}/></aside></div>}</>}
+function Button({children,...props}:React.ButtonHTMLAttributes<HTMLButtonElement>){return <button {...props} className="rounded border px-2.5 py-1.5 text-[11px] font-medium hover:bg-[#f5f5f2] disabled:cursor-not-allowed disabled:opacity-40">{children}</button>}function Info({label,value}:{label:string;value:string}){return <div><dt className="text-xs text-[#777772]">{label}</dt><dd className="mt-1 break-words">{value}</dd></div>}function Json({title,value}:{title:string;value:unknown}){return <section className="mt-6"><h3 className="mb-2 text-sm font-semibold">{title}</h3><pre className="overflow-x-auto whitespace-pre-wrap rounded bg-[#f5f5f2] p-3 text-xs">{value?JSON.stringify(value,null,2):'Sem dados.'}</pre></section>}

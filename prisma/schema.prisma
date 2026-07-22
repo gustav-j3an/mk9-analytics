@@ -27,40 +27,51 @@ model Supervisor {
 }
 
 model Promoter {
-  id           String     @id @default(cuid())
+  id           String         @id @default(cuid())
   name         String
+  phone        String?
+  email        String?
   city         String?
   state        String?
+  status       PromoterStatus @default(ACTIVE)
+  archivedAt   DateTime?
+  deletedAt    DateTime?
+  operationId  String?
   supervisorId String
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
-  supervisor   Supervisor @relation(fields: [supervisorId], references: [id])
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  supervisor   Supervisor     @relation(fields: [supervisorId], references: [id])
+  operation    Operation?     @relation(fields: [operationId], references: [id], onDelete: SetNull)
   visits       Visit[]
 }
 
 model Industry {
-  id        String          @id @default(cuid())
-  code      String          @unique
-  name      String
-  createdAt DateTime        @default(now())
-  updatedAt DateTime        @updatedAt
-  visits    Visit[]
-  aliases   IndustryAlias[]
-  evidences VisitEvidence[]
+  id                  String          @id @default(cuid())
+  code                String          @unique
+  name                String
+  contractedFrequency Int?
+  archivedAt          DateTime?
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+  visits              Visit[]
+  aliases             IndustryAlias[]
+  evidences           VisitEvidence[]
 }
 
 model Store {
-  id        String          @id @default(cuid())
-  code      String          @unique
-  name      String
-  chain     String?
-  city      String?
-  state     String?
-  createdAt DateTime        @default(now())
-  updatedAt DateTime        @updatedAt
-  visits    Visit[]
-  aliases   StoreAlias[]
-  evidences VisitEvidence[]
+  id         String          @id @default(cuid())
+  code       String          @unique
+  name       String
+  chain      String?
+  address    String?
+  city       String?
+  state      String?
+  archivedAt DateTime?
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+  visits     Visit[]
+  aliases    StoreAlias[]
+  evidences  VisitEvidence[]
 }
 
 model Visit {
@@ -97,6 +108,7 @@ model Operation {
   visits       Visit[]
   imports      Import[]
   evidences    VisitEvidence[]
+  promoters    Promoter[]
 
   @@unique([month, year])
 }
@@ -244,6 +256,11 @@ model SyncLog {
 enum UserRole {
   ADMIN
   SUPERVISOR
+}
+
+enum PromoterStatus {
+  ACTIVE
+  INACTIVE
 }
 
 enum VisitStatus {

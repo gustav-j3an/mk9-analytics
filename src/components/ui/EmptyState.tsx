@@ -19,7 +19,7 @@ export const EmptyState = ({
   icon = <Database className="h-5 w-5 text-[#71717A]" />,
 }: EmptyStateProps) => {
   return (
-    <div className="flex flex-col items-center justify-center space-y-3 rounded-2xl border border-[#F4F4F5] bg-white p-12 text-center shadow-[0_1px_3px_rgba(0,0,0,0.01),_0_1px_2px_rgba(0,0,0,0.005)]">
+    <div className="flex flex-col items-center justify-center space-y-3 empty-state rounded-2xl border p-8 text-center sm:p-12">
       <div className="rounded-xl bg-[#F4F4F5] p-3">{icon}</div>
       <div className="max-w-md space-y-1">
         <h4 className="text-xs font-bold text-[#09090B] uppercase tracking-wider">{title}</h4>

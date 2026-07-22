@@ -4,11 +4,12 @@ import { z } from 'zod';
  * Zod schema for store validation
  */
 export const storeSchema = z.object({
-  name: z.string().min(1, 'Name is required').max(255),
-  code: z.string().min(1, 'Code is required').max(50),
+  name: z.string().trim().min(1, 'Nome é obrigatório').max(255),
+  code: z.string().trim().min(1, 'Código é obrigatório').max(50),
   chain: z.string().max(100).optional().nullable(),
+  address: z.string().max(255).optional().nullable(),
   city: z.string().max(100).optional().nullable(),
-  state: z.string().max(100).optional().nullable(),
+  state: z.string().trim().max(2).transform((value) => value.toUpperCase()).optional().nullable(),
 });
 
 /**

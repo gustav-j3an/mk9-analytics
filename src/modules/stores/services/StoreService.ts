@@ -5,25 +5,22 @@ const normalizeStoreInput = (data: Record<string, any>) => {
   const next = { ...data };
   // Convert empty strings to null for optional string fields
   if (next.chain === '') next.chain = null;
+  if (next.address === '') next.address = null;
   if (next.city === '') next.city = null;
   if (next.state === '') next.state = null;
   return next;
 };
 
 export const storeService = {
-  async getStores(options: { page?: number; limit?: number; search?: string; chain?: string; city?: string; state?: string } = {}) {
-    const page = options.page ?? 1;
-    const limit = options.limit ?? 10;
+  async getStores(options: { page?: number; limit?: number; search?: string; city?: string; state?: string; operationId?: string; archived?: 'active' | 'archived' | 'all' } = {}) {
+    const page = Math.max(1, options.page ?? 1);
+    const limit = Math.min(100, Math.max(1, options.limit ?? 10));
     const skip = (page - 1) * limit;
 
-    const where: Record<string, any> = {};
+    const where: Record<string, any> = options.archived === 'all' ? {} : { archivedAt: options.archived === 'archived' ? { not: null } : null };
 
     if (options.search) {
       where.name = { contains: options.search, mode: 'insensitive' };
-    }
-
-    if (options.chain) {
-      where.chain = options.chain;
     }
 
     if (options.city) {
@@ -34,12 +31,18 @@ export const storeService = {
       where.state = options.state;
     }
 
+    if (options.operationId) where.visits = { some: { operationId: options.operationId } };
+
     const [items, total] = await Promise.all([
       prisma.store.findMany({
         where,
         skip,
         take: limit,
         orderBy: { name: 'asc' },
+        include: {
+          visits: { select: { operation: { select: { id: true, name: true } } }, distinct: ['operationId'] },
+          _count: { select: { visits: true } },
+        },
       }),
       prisma.store.count({ where }),
     ]);
@@ -56,7 +59,7 @@ export const storeService = {
   },
 
   async getStoreById(id: string) {
-    const store = await prisma.store.findUnique({ where: { id } });
+    const store = await prisma.store.findUnique({ where: { id }, include: { visits: { orderBy: { scheduledDate: 'desc' }, include: { operation: true, industry: true, promoter: true } } } });
 
     if (!store) {
       const error = new Error('Store not found');
@@ -65,6 +68,15 @@ export const storeService = {
     }
 
     return store;
+  },
+
+  async getFilterOptions() {
+    const [states, cities, operations] = await Promise.all([
+      prisma.store.findMany({ where: { state: { not: null } }, distinct: ['state'], select: { state: true }, orderBy: { state: 'asc' } }),
+      prisma.store.findMany({ where: { city: { not: null } }, distinct: ['city'], select: { city: true }, orderBy: { city: 'asc' } }),
+      prisma.operation.findMany({ where: { visits: { some: {} } }, select: { id: true, name: true }, orderBy: { name: 'asc' } }),
+    ]);
+    return { states: states.flatMap((item) => item.state ? [item.state] : []), cities: cities.flatMap((item) => item.city ? [item.city] : []), operations };
   },
 
   async createStore(data: Record<string, any>) {
@@ -85,7 +97,7 @@ export const storeService = {
     return prisma.store.update({ where: { id }, data: validated });
   },
 
-  async deleteStore(id: string) {
+  async setArchived(id: string, archived: boolean) {
     const existing = await prisma.store.findUnique({ where: { id } });
 
     if (!existing) {
@@ -94,16 +106,7 @@ export const storeService = {
       throw error;
     }
 
-    // Check if store has associated visits
-    const visitCount = await prisma.visit.count({ where: { storeId: id } });
-    if (visitCount > 0) {
-      const error = new Error('Cannot delete store with associated visits');
-      (error as Error & { status?: number }).status = 400;
-      throw error;
-    }
-
-    await prisma.store.delete({ where: { id } });
-    return { success: true };
+    return prisma.store.update({ where: { id }, data: { archivedAt: archived ? new Date() : null } });
   },
 };
 
