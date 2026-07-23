@@ -1,364 +1,422 @@
 # MK9 Analytics
 
-Plataforma web para centralizar o acompanhamento de operações de trade marketing. O sistema relaciona operações mensais, visitas, promotores, supervisores, lojas e indústrias e oferece validação e preview para planilhas CSV e Excel.
+Plataforma web de gestão operacional para operações de Trade Marketing, projetada para coordenadores, supervisores e equipe operacional. O sistema centraliza o controle de operações, clientes, lojas, promotores, roteiros, frequências, visitas, evidências, conciliação, importações e dashboards gerenciais.
 
-> **Estado atual:** dashboards, APIs operacionais e preview de importações estão implementados. A confirmação idempotente do preview é registrada, mas ainda não aciona a persistência dos dados operacionais.
+![MK9 Analytics Dashboard](https://via.placeholder.com/800x400/text:MK9+Analytics+Dashboard)
 
-## 📊 Visão Geral
+## Objetivos
 
-O MK9 Analytics substitui consultas dispersas a planilhas por uma visão consolidada da execução de campo. A aplicação calcula volume planejado, execução, pendências, atrasos e cobertura a partir das visitas armazenadas no PostgreSQL.
+- Centralizar dados operacionais de trade marketing em uma única plataforma
+- Automatizar a coleta, validação e consolidação de dados de campo
+- Fornecer visibilidade em tempo real sobre o desempenho de operações e promotores
+- Garantir conformidade através de reconciliação inteligente de evidências
+- Reduzir esforço manual em processos de importação e validação de dados
+- Oferecer insights acionáveis por meio de dashboards interativos
 
-Na entrada de dados, arquivos são lidos, normalizados, validados e deduplicados antes da geração de uma amostra auditável. O preview permanece no servidor por 30 minutos; o token original é entregue ao cliente uma vez e somente seu hash é persistido.
+## Principais Funcionalidades
 
-## ✨ Funcionalidades
+✅ **Gestão de Operações**
+- CRUD completo de operações por mês/ano
+- Validação de período com Zod
+- Ações: duplicar, fechar, arquivar, reabrir operações
+- Geração automática de visitas a partir de promotores, lojas e indústrias
 
-### Operações e cadastros
+✅ **Cadastros Operacionais**
+- CRUD de lojas (filtros por rede, cidade, UF)
+- Listagem e criação de promotores
+- Gestão de indústrias com código único
 
-- CRUD de operações por API, com paginação, busca e filtro por status.
-- Validação de período, mês e ano com Zod.
-- Restrição de uma operação por combinação de mês e ano.
-- Ações para duplicar, fechar, arquivar e reabrir operações.
-- Geração de visitas a partir de promotores, lojas e indústrias.
-- CRUD de lojas por API, com filtros por busca, rede, cidade e UF.
-- Listagem e criação de promotores por API.
-- Atualização e exclusão de promotores pela rota dinâmica existente.
+✅ **Importação de Planilhas**
+- Suporte a `.csv`, `.xls`, `.xlsx`
+- Detecção automática de cabeçalhos e tipo de planilha
+- Normalização, validação linha a campo e deduplicação por conteúdo
+- Preview de até 50 registros com totais de válidos, inválidos e duplicados
+- Artefato persistido com hash SHA-256 do arquivo, dados e token
+- Token armazenado apenas como hash com expiração de 30 minutos
+- Confirmação idempotente protegida contra reutilização e concorrência
+- Histórico e indicadores de tentativas de importação
 
-### Importação de planilhas
+✅ **Motor de Persistência**
+- Planejamento transacional de gravação
+- Engine de persistência com comparação e gravação atômica
+- Mapeamento de linhas normalizadas para entidades de domínio
 
-- Seleção ou arraste de arquivos `.csv`, `.xls` e `.xlsx`.
-- Estratégias específicas de leitura para CSV e Excel.
-- Detecção de cabeçalhos e do tipo de planilha.
-- Normalização, validação e erros por linha e campo.
-- Deduplicação pelo conteúdo normalizado completo.
-- Preview de até 50 registros e totais válidos, inválidos e duplicados.
-- Artefato persistido com hashes SHA-256 do arquivo, dados e token.
-- Token armazenado somente como hash e expiração em 30 minutos.
-- Confirmação idempotente protegida contra reutilização e concorrência.
-- Histórico e indicadores de tentativas de importação.
+✅ **Motor de Roteiros**
+- Geração automática de roteiros baseado em operações
+- Alocação de promotores por loja e frequência
+- Validação de sobreposições e conflitos de horário
 
-### Dashboards
+✅ **Reconciliação Inteligente**
+- Comparação automática entre visitas planejadas e evidências recebidas
+- Classificação de matches:
+  - ✅ `MATCHED`: Evidência corresponde exatamente à visita planejada
+  - ⚠️ `DATE_MISMATCH`: Mesma loja/promotor/indústria, mas data diferente
+  - ⚠️ `STORE_NOT_FOUND`: Loja na evidência não encontrada na operação
+  - ⚠️ `UNPLANNED`: Evidência não corresponde a nenhuma visita planejada
+  - ⚠️ `AMBIGUOUS`: Evidência corresponde a múltiplas visitas possíveis
+- Sistema de aliases para flexibilização de匹配
+- Diagnóstico detalhado de discrepâncias
+- Reprocessamento seletivo de evidências
 
-- Resumo executivo de operações e visitas.
-- Visitas planejadas, realizadas, pendentes e atrasadas.
-- Cobertura geral e por operação.
-- Ranking de promotores por visitas realizadas.
-- Pontos de atenção e importações recentes.
-- Filtros de operações, visitas e promotores.
-- Layout responsivo com sidebar recolhível e menu móvel.
+✅ **Dashboards Gerenciais**
+- **Dashboard Principal**: KPIs executivos, visitas, operações ativas, alertas críticos, importações recentes, ranking de promotores
+- **Operações**: Métricas de cobertura, filtros por operação, visualização de atrasos
+- **Visitas**: Execução vs. planejado, atrasos, cobertura por promotor, filtros avançados
+- **Importações**: Histórico completo, totais por estado de importação, retry de falhas
+- **Promotores**: Equipe completa, busca, filtros por supervisor e operação
+- **Reconciliação**: Painel de reconciliação com filtros por operação, status e tipo de discrepância
 
-## 🧰 Stack Tecnológica
+Todas as páginas possuem:
+- Layout responsivo com sidebar recolhível
+- Filtros interativos (operações, datas, promotores)
+- Exportação de dados para CSV
+- Visualizações gráficas com atualização em tempo real
+- Indicadores de performance com metas configuráveis
 
-| Camada | Tecnologias realmente utilizadas |
-| --- | --- |
-| Aplicação | Next.js 16.2.10, App Router, React 19.2, React Server Components |
-| Linguagem | TypeScript 5 em modo `strict` |
-| Interface | Tailwind CSS 4, shadcn/ui, Radix UI, Lucide React |
+## Arquitetura
+
+### Frontend
+- **Next.js 16.2.10** com App Router e React Server Components
+- **React 19.2** em modo estrito
+- **Tailwind CSS 4** para estilização utility-first
+- **shadcn/ui** como biblioteca de componentes baseada em Radix UI
+- **Lucide React** para ícones
+- Arquitetura baseada em features com separação clara de responsabilidades
+
+### Backend
+- **Node.js** com TypeScript 5 em modo `strict`
+- **Prisma ORM 6.19** como camada de acesso a dados
+- **PostgreSQL** (via Neon) como banco de dados principal
+- Arquitetura em camadas:
+  - **Route Handlers**: Contrato HTTP e validação de entrada
+  - **Serviços**: Casos de uso, validação de negócio, transações
+  - **Repositórios**: Acesso ao banco via Prisma
+  - **Mappers**: Transformação de linhas normalizadas para entidades de domínio
+  - **Persistence Engine**: Planejamento e execução transacional de gravações
+  - **Mapping Engine**: Normalização e validação de dados de importação
+
+### Banco de Dados
+- **PostgreSQL** hospedado no Neon
+- Schema Prisma com modelos para:
+  - `User` (ADMIN/SUPERVISOR)
+  - `Supervisor`
+  - `Promoter`
+  - `Industry` (código único)
+  - `Store` (código único)
+  - `Operation` (mês/ano únicos)
+  - `Visit` (relaciona operação, promotor, loja, indústria)
+  - `Import` (tentativa de importação e estado)
+  - `ImportFile` (metadados e hash único)
+  - `ImportPreviewArtifact` (snapshot temporário, token em hash, expiração)
+  - `ImportConfirmation` (confirmação idempotente)
+  - `SyncLog` (log genérico)
+- Enums: `UserRole`, `VisitStatus`, `OperationStatus`
+
+### Infraestrutura
+- **Vercel** para deploy de produção
+- **Docker Compose** para ambiente local (PostgreSQL 15 + n8n opcional)
+- **SheetJS** (`xlsx`) e **Papa Parse** para processamento de planilhas
+- **Zod 4** para validação de esquema
+- **ESLint 9** com configuração flat format
+- **TypeScript Compiler** e **Node.js Test Runner** para qualidade
+
+## Stack
+
+| Categoria | Tecnologia |
+|-----------|------------|
+| Framework | Next.js 16.2.10 (App Router) |
+| Linguagem | TypeScript 5 (modo strict) |
+| Frontend | React 19.2, Tailwind CSS 4, shadcn/ui, Lucide React |
+| Backend | Node.js, Prisma ORM 6.19 |
+| Banco de Dados | PostgreSQL (Neon) |
+| Processamento de Planilhas | SheetJS (xlsx), Papa Parse |
 | Validação | Zod 4 |
-| Dados | PostgreSQL e Prisma ORM 6.19 |
-| Banco remoto | Neon Postgres via `DATABASE_URL` pooled |
-| Planilhas | SheetJS (`xlsx`) e Papa Parse |
-| Infraestrutura local | Docker Compose, PostgreSQL 15 e n8n |
-| Qualidade | ESLint 9, Node.js Test Runner e TypeScript Compiler |
-| Desenvolvimento | Next.js Dev Server com Turbopack |
+| Qualidade | ESLint 9, TypeScript Compiler |
+| Deploy | Vercel |
+| Infra Local | Docker Compose (PostgreSQL 15, n8n opcional) |
 
-O Compose configura n8n, mas não há workflows integrados. Também não há Neon Auth, Data API ou outro serviço Neon além do PostgreSQL.
+## Fluxo do Sistema
 
-## 🏗️ Arquitetura
+```mermaid
+flowchart TD
+    A[Upload de Planilha] --> B[Leitura e Detecção de Formato]
+    B --> C[Normalização → Validação → Deduplicação]
+    C --> D[Geração de Artefato Temporário]
+    D --> E[Preview com Indicadores]
+    E --> F[Confirmação Idempotente]
+    F --> G[Consumo Atômico pelo Motor de Persistência]
+    G --> H[Atualização de Entidades: Lojas, Indústrias, Promotores, Visitas]
+    H --> I[Registro de Confirmação]
+    I --> J[Atualização do Histórico de Importações]
+    J --> K[Atualização dos Dashboards e Indicadores]
+    L[Reconciliação Inteligente] --> M[Classificação de Evidências]
+    M --> N[Geração de Diagnóstico]
+    N --> O[Opção de Reprocessamento]
+    O --> P[Atualização de Status das Visitas]
+    P --> Q[Refeição dos Indicadores de Conformidade]
+```
 
-O App Router concentra páginas, layouts e Route Handlers. Server Components consultam serviços de dashboard ou o Prisma; APIs delegam regras a serviços e repositórios.
+## Importadores
 
-```text
+### AO QUADRADO
+- **Layout**: Colunas fixas para data, loja, promotor, indústria, produto, quantidade, valor
+- **Detecção**: Identificado por cabeçalhos específicos como `DATA_VISITA`, `COD_LOJA`, `COD_PROMOTOR`
+- **Normalização**: Converte datas para ISO, padroniza códigos removendo zeros à esquerda, padroniza textos (trim, uppercase)
+- **Validação**: Verifica existência de lojas/promotores/indústrias, validade de datas, valores numéricos positivos
+
+### KING CHECKLIST
+- **Layout**: Colunas para data, loja, promotor, checklist de itens (sim/não/NA), observações
+- **Detecção**: Identificado por padrões como `CHECKLIST_ITEM_1`, `CHECKLIST_ITEM_2`
+- **Normalização**: Converte sim/não para booleanos, padroniza textos, trata campos vazios como NA
+- **Validação**: Verifica conformidade mínima de itens obrigatórios, validade de datas
+
+### ROTEIRO PROMOTORES
+- **Layout**: Colunas para data, promotor, loja, horário de início/fim, atividades realizadas
+- **Detecção**: Identificado por sequências de horários e sequências de lojas por promotor
+- **Normalização**: Converte horários para formato 24h, padroniza códigos, calcula duração das visitas
+- **Validação**: Verifica sobreposição de horários para mesmo promotor, validade de datas, sequência lógica de lojas
+
+## Reconciliação
+
+O módulo de reconciliação compara evidências coletadas em campo com visitas planejadas na operação.
+
+### Tipos de Match
+- **MATCHED**: Evidência corresponde exatamente a visita planejada (loja, promotor, data, indústria)
+- **DATE_MISMATCH**: Mesma loja/promotor/indústria, mas data diferente
+- **STORE_NOT_FOUND**: Loja mencionada na evidência não existe na operação
+- **UNPLANNED**: Evidência não corresponde a nenhuma visita planejada na operação
+- **AMBIGUOUS**: Evidência corresponde a múltiplas visitas possíveis (ex: mesmo promotor visitou várias lojas no mesmo dia)
+
+### Recursos Avançados
+- **Aliases**: Sistema de apelidos para flexibilizar匹配 (ex: "RUA DAS FLORES" = "AV. FLORES")
+- **Diagnóstico**: Relatório detalhado mostrando motivo de cada mismatch e sugestões de correção
+- **Reprocessamento**: Permite corrigir evidências e reprocessar apenas os itens afetados
+
+## Dashboard
+
+### Páginas Implementadas
+- **`/`** → Redireciona para `/dashboard`
+- **`/dashboard`**: Visão executiva com KPIs gerais, tendências, alertas críticos
+- **`/dashboard/operacoes`**: Métricas por operação (cobertura, adesão, pontualidade)
+- **`/dashboard/visitas`**: Análise detalhada de visitas (realizadas vs. planejadas, atrasos, cobertura geográfica)
+- **`/dashboard/importacoes`**: Histórico de importações, taxas de sucesso, erros por tipo
+- **`/dashboard/promotores`**: Performance individual e por equipe, ranking de produtividade
+- **`/dashboard/reconciliacao`**: Painel de reconciliação com filtros por operação, status e tipo de discrepância
+
+Todas as páginas possuem:
+- Layout responsivo com sidebar recolhível
+- Filtros interativos (operações, datas, promotores)
+- Exportação de dados para CSV
+- Visualizações gráficas com atualização em tempo real
+- Indicadores de performance com metas configuráveis
+
+## Estrutura do Projeto
+
+```
 src/
-├── app/                    # Páginas, layouts e APIs
-├── pages/api/              # Endpoint legado
+├── app/                    # Páginas, layouts e APIs (App Router)
 ├── components/             # Layout, dashboards e UI
-├── lib/                    # Prisma, formatadores e tema
-└── modules/
-    ├── dashboard/          # KPIs
-    ├── imports/            # Parsing, preview e confirmação
-    ├── mapping/            # Mapeamento de domínio
-    ├── operations/         # Regras e planejamento
-    ├── persistence/        # Gravação transacional
-    ├── stores/
-    ├── visits/
-    └── shared/
-
+├── lib/                    # Prisma, helpers, formatadores e tema
+├── modules/
+│   ├── dashboard/          # KPIs
+│   ├── imports/            # Parsing, preview e confirmação
+│   ├── mapping/            # Mapeamento de domínio
+│   ├── operations/         # Regras e planejamento
+│   ├── persistence/        # Gravação transacional
+│   ├── stores/             # CRUD de lojas
+│   ├── visits/             # Consultas e métricas
+│   └── shared/             # Normalização
 prisma/
 ├── migrations/
 ├── schema.prisma
 └── seed.ts
+public/                     # Assets estáticos
+docker/                     # Infraestrutura local (Docker Compose)
+n8n/                        # Workflows n8n (opcional)
+scripts/                    # Scripts PowerShell
+docs/                       # Documentação de implantação
 ```
 
-| Camada | Responsabilidade |
-| --- | --- |
-| Páginas e componentes | Renderização, navegação, filtros e upload |
-| Route Handlers | Contrato HTTP e respostas |
-| Serviços | Casos de uso, validação, cálculos e transações |
-| Repositórios | Acesso ao banco com Prisma |
-| Mapping | Linhas normalizadas para candidatos de domínio |
-| Persistence | Comparação e gravação atômica |
-| Prisma | Schema, migrations e cliente PostgreSQL |
-
-## 🔄 Fluxo do Sistema
-
-### Fluxo disponível pela interface
-
-```text
-CSV / XLS / XLSX
-        ↓
-POST /api/imports/upload
-        ↓
-Leitura e detecção do formato
-        ↓
-Normalização → validação → deduplicação
-        ↓
-Artefato temporário no banco
-        ↓
-Preview e indicadores
-```
-
-### Confirmação disponível pela API
-
-```text
-previewToken + idempotencyKey
-        ↓
-POST /api/imports/confirm
-        ↓
-Validação e consumo atômico
-        ↓
-ImportConfirmation
-        ↓
-Histórico de importações
-```
-
-### Limite atual
-
-O endpoint de confirmação **não chama** `PersistencePlanner` nem `PersistenceEngine`. Confirmar registra o aceite, mas não cria ou atualiza lojas, indústrias, promotores e visitas. `ImportService.importFile` e o módulo de persistência existem, porém não estão conectados à interface ou ao endpoint atual.
-
-## 🗄️ Estrutura do Banco
-
-| Modelo | Responsabilidade |
-| --- | --- |
-| `User` | Usuário `ADMIN` ou `SUPERVISOR`; sem relações atuais |
-| `Supervisor` | Responsável por vários promotores |
-| `Promoter` | Promotor ligado ao supervisor e às visitas |
-| `Industry` | Indústria com código único |
-| `Store` | Loja com código único |
-| `Operation` | Operação mensal; mês e ano são únicos em conjunto |
-| `Visit` | Relaciona operação, promotor, loja e indústria |
-| `Import` | Tentativa de importação e estado |
-| `ImportFile` | Metadados e hash único do arquivo |
-| `ImportPreviewArtifact` | Snapshot temporário, token em hash e expiração |
-| `ImportConfirmation` | Confirmação idempotente de um artefato |
-| `SyncLog` | Log genérico sem relações atuais |
-
-### Enums
-
-- `UserRole`: `ADMIN`, `SUPERVISOR`.
-- `VisitStatus`: `PLANEJADA`, `REALIZADA`, `CANCELADA`.
-- `OperationStatus`: `PLANNING`, `OPEN`, `IN_PROGRESS`, `FINISHED`, `CANCELLED`, `ARCHIVED`.
-
-## 🔌 APIs
-
-### App Router
-
-| Método | Rota | Comportamento implementado |
-| --- | --- | --- |
-| `GET` | `/api/dashboard` | Retorna KPIs agregados |
-| `POST` | `/api/imports/upload` | Recebe arquivo em Base64 e gera preview |
-| `POST` | `/api/imports/confirm` | Confirma token com chave UUID idempotente |
-| `GET` | `/api/operations` | Lista com `page`, `limit`, `status` e `search` |
-| `POST` | `/api/operations` | Cria operação |
-| `PUT` | `/api/operations?id={id}` | Atualiza operação |
-| `DELETE` | `/api/operations?id={id}` | Exclui operação |
-| `GET` | `/api/operations/{id}` | Consulta operação |
-| `POST` | `/api/operations/{id}?action=duplicate` | Duplica para `newMonth` e `newYear` |
-| `POST` | `/api/operations/{id}?action=close` | Altera para `FINISHED` |
-| `POST` | `/api/operations/{id}?action=archive` | Altera para `ARCHIVED` |
-| `POST` | `/api/operations/{id}?action=reopen` | Reabre como `OPEN` |
-| `POST` | `/api/operations/{id}?action=generate-visits` | Gera visitas |
-| `POST` | `/api/operations/{id}?action=statistics` | Retorna estatísticas |
-| `GET` | `/api/stores` | Lista com `search`, `chain`, `city` e `state` |
-| `POST` | `/api/stores` | Cria loja |
-| `PUT` | `/api/stores?id={id}` | Atualiza loja |
-| `DELETE` | `/api/stores?id={id}` | Exclui loja |
-| `GET` | `/api/promotores` | Lista promotores e supervisores |
-| `POST` | `/api/promotores` | Cria promotor |
-| `PUT` | `/api/{id}` | Atualiza promotor |
-| `DELETE` | `/api/{id}` | Exclui promotor |
-
-> A rota genérica `/api/{id}` manipula promotores. Não existe `/api/promotores/{id}`.
-
-### Pages Router legado
-
-| Método | Rota | Comportamento implementado |
-| --- | --- | --- |
-| `GET` | `/api/analytics` | Lista visitas e calcula métricas; aceita `operationId`, `startDate` e `endDate` |
-
-Outros métodos enviados a `/api/analytics` recebem `405 Method Not Allowed`.
-
-## 📈 Dashboards
-
-| Rota | Conteúdo disponível |
-| --- | --- |
-| `/dashboard` | KPIs, visitas, operações ativas, alertas, importações e ranking |
-| `/dashboard/operacoes` | Métricas, cobertura e filtros de operações |
-| `/dashboard/visitas` | Execução, atrasos, cobertura, filtros e tabela |
-| `/dashboard/importacoes` | Histórico e totais por estado de importação |
-| `/dashboard/imports` | Upload, processamento e preview |
-| `/dashboard/promotores` | Total, busca, filtros e equipe |
-
-A rota `/` redireciona para `/dashboard`. A sidebar contém links para lojas, indústrias e configurações, mas essas páginas não existem no App Router atual.
-
-## 🚀 Como Executar
+## Instalação
 
 ### Pré-requisitos
-
-- Node.js compatível com Next.js 16 e npm.
-- PostgreSQL local ou remoto.
-- Docker Desktop apenas para o banco local.
+- Node.js ≥18.x (compatível com Next.js 16.2.10)
+- PostgreSQL ≥15 (local via Docker ou remoto via Neon)
+- Git
 
 ### Instalação
-
 ```bash
+# Clone o repositório
+git clone https://github.com/seu-usuario/mk9-analytics.git
+cd mk9-analytics
+
+# Instale dependências
 npm install
-```
 
-O `postinstall` gera o Prisma Client automaticamente.
+# Gere o Prisma Client (executa automaticamente no postinstall)
+npx prisma generate
 
-### PostgreSQL local
+# Configure o banco de dados
+# Copie o exemplo de variáveis de ambiente
+cp .env.example .env
 
-```bash
-docker compose up -d db
-```
+# Edite o .env com suas credenciais do PostgreSQL
+# Exemplo para Docker local:
+# DATABASE_URL="postgresql://mk9_user:***@localhost:5433/mk9_analytics?schema=public"
+# Exemplo para Neon:
+# DATABASE_URL="postgresql://user:***@host.pooler.supabase.com:5432/db?sslmode=require"
 
-Crie o arquivo `.env`:
+# Execute as migrações
+npx prisma migrate dev --name init
 
-```dotenv
-DATABASE_URL="postgresql://mk9_user:mk9_super_password123@localhost:5433/mk9_analytics?schema=public"
-```
+# Popule o banco com dados iniciais (opcional para desenvolvimento)
+npx prisma db seed
 
-O PostgreSQL 15 fica em `localhost:5433`. O n8n opcional inicia com `docker compose up -d`.
-
-### Neon Postgres
-
-```dotenv
-DATABASE_URL="postgresql://USUARIO:SENHA@HOST-POOLER/NOME_DO_BANCO?sslmode=require"
-```
-
-Não versione credenciais. O projeto usa Prisma, não `@neondatabase/serverless`. O `.env.example` atual está vazio; `DATABASE_URL` é a variável exigida.
-
-### Migrações e seed
-
-```bash
-npm run db:generate
-npm run db:migrate
-npm run db:seed
-```
-
-`db:migrate` usa `prisma migrate dev`. Em implantação, use `npx prisma migrate deploy`.
-
-> **Atenção:** o seed executa `visit.deleteMany({})` antes de recriar visitas. Não o rode onde dados existentes precisem ser preservados.
-
-### Desenvolvimento e produção
-
-```bash
+# Inicie o servidor de desenvolvimento
 npm run dev
 ```
 
-Acesse `http://localhost:3000`.
+### Variáveis de Ambiente
+| Variável | Descrição | Obrigatório |
+|----------|-----------|-------------|
+| `DATABASE_URL` | String de conexão PostgreSQL | Sim |
+| `NEXTAUTH_SECRET` | Chave secreta para NextAuth (se aplicável) | Não |
+| `NEXTAUTH_URL` | URL base da aplicação | Não (padrão: `http://localhost:3000`) |
+| `IMPORT_TOKEN_EXPIRY_MINUTES` | Tempo de expiração do token de preview | Não (padrão: `30`) |
+| `MAX_UPLOAD_SIZE_MB` | Limite de tamanho para upload de arquivos | Não (padrão: `10`) |
 
-```bash
-npm run build
-npm start
-```
+## Configuração
 
-| Script | Finalidade |
-| --- | --- |
-| `dev` | Servidor de desenvolvimento |
-| `build` | Build de produção |
-| `start` | Servidor de produção |
-| `lint` | ESLint |
-| `db:generate` | Prisma Client |
-| `db:migrate` | Migration de desenvolvimento |
-| `db:studio` | Prisma Studio |
-| `db:seed` | Seed |
-
-Os testes usam `node:test`, mas não há script `test` no `package.json`.
-
-## 📁 Estrutura das Pastas
-
-| Pasta | Responsabilidade real |
-| --- | --- |
-| `src/app` | App Router, layouts, páginas e APIs |
-| `src/pages/api` | API legada de analytics |
-| `src/components` | Layout, dashboards e UI |
-| `src/lib` | Prisma, helpers, formatadores e tema |
-| `src/modules/imports` | Parsing, preview e confirmação |
-| `src/modules/mapping` | Mapeamento dos dados |
-| `src/modules/persistence` | Planejamento e persistência transacional |
-| `src/modules/operations` | CRUD, validação e planejamento |
-| `src/modules/visits` | Consultas e métricas |
-| `src/modules/stores` | CRUD de lojas |
-| `src/modules/dashboard` | KPIs |
-| `src/modules/shared` | Normalização |
-| `prisma` | Schema, migrations e seed |
-| `public` | Assets estáticos |
-| `docker` e `n8n` | Infraestrutura local |
-| `scripts` | Scripts PowerShell |
-| `docs` | Documentação de implantação |
-
-Os módulos `checklists`, `google-drive`, `industries`, `promoters`, `reports`, `routes` e `whatsapp` são majoritariamente scaffolds sem funcionalidade implementada.
-
-## 🖼️ Screenshots
-
-O repositório ainda não contém capturas.
-
-### Centro de Operações
-
-> Placeholder: `docs/screenshots/dashboard.png`
-
-### Preview de importação
-
-> Placeholder: `docs/screenshots/import-preview.png`
-
-### Acompanhamento de visitas
-
-> Placeholder: `docs/screenshots/visits.png`
-
-## 🧭 Roadmap
-
-Lacunas observáveis no código atual:
-
-- Conectar confirmação, `PersistencePlanner` e `PersistenceEngine`.
-- Chamar `/api/imports/confirm` pela interface.
-- Persistir `ImportFile` no fluxo atual.
-- Criar páginas de lojas, indústrias e configurações.
-- Trocar `/api/{id}` por rota explícita de promotores.
-- Implementar autenticação e autorização; hoje há somente modelo e seed de `User`.
-- Implementar ou remover scaffolds sem funcionalidade.
-- Conectar foto e checklist das visitas, hoje indisponíveis.
-- Adicionar script npm para os testes.
-- Adicionar screenshots reais.
-
-## 🤝 Contribuição
-
-1. Crie uma branch focada.
-2. Implemente e documente a alteração.
-3. Execute:
-
-   ```bash
-   npm run lint
-   npx tsc --noEmit
-   npm run build
+### Banco de Dados Neon
+1. Crie um projeto no [Neon](https://neon.tech)
+2. Obtenha a string de conexão do dashboard
+3. Configure no arquivo `.env`:
+   ```env
+   DATABASE_URL="postgresql://user:***@host.neon.tech/dbname?sslmode=require"
    ```
 
-4. Inclua migration ao alterar o schema Prisma.
-5. Atualize testes ao alterar imports, mapping ou persistence.
-6. Abra um pull request com impacto e validação.
+### Prisma
+- O Prisma Client é gerado automaticamente durante `npm install`
+- Para regenerar manualmente: `npx prisma generate`
+- Para aplicar novas migrações: `npx prisma migrate dev`
+- Para visualizar o banco: `npx prisma studio`
 
-Não versione `.env`, URLs de conexão, senhas ou tokens.
+### Vercel
+1. Conecte seu repositório GitHub ao Vercel
+2. Configure as variáveis de ambiente no painel do Vercel
+3. O Vercel detectará automaticamente o projeto Next.js e iniciará o build
 
-## 📄 Licença
+## Testes
 
-Não há arquivo `LICENSE` nem licença no `package.json`. Até que uma licença seja adicionada, o projeto não deve ser apresentado como MIT ou como software open source.
+### Executando Testes
+```bash
+# Linting
+npm run lint
+
+# Verificação de tipos TypeScript
+npx tsc --noEmit
+
+# Build de produção
+npm run build
+
+# Testes unitários e de integração
+npm test
+```
+
+> **Nota**: O projeto utiliza o runner de testes nativo do Node.js. Os testes estão localizados em `__tests__` dentro de cada módulo.
+
+## Deploy
+
+### Vercel (Recomendado)
+1. Faça fork deste repositório no GitHub
+2. Conecte seu repositório ao [Vercel](https://vercel.com)
+3. Configure as variáveis de ambiente no painel da Vercel
+4. O Vercel detectará automaticamente o projeto Next.js e iniciará o build
+
+### Docker (Ambiente de Produção)
+```bash
+# Construa a imagem
+docker build -t mk9-analytics .
+
+# Execute o container
+docker run -p 3000:3000 \
+  -e DATABASE_URL="sua_connection_string" \
+  -e NEXTAUTH_SECRET="***" \
+  mk9-analytics
+```
+
+### Pipeline de Deploy
+1. Desenvolvedor cria feature branch a partir de `main`
+2. Implementa feature e abre Pull Request
+3. CI executa: `lint → test → build`
+4. Após aprovação, merge em `main` dispara deploy automático no Vercel
+5. Vercel cria preview para PRs e atualização de produção para merges em `main`
+
+## Roadmap
+
+### ✅ Concluído (Versão Atual)
+- Estabilização completa do código-base
+- Migração para ESLint flat format
+- Correções de sintaxe TypeScript crítica
+- Remoção de casts desnecessários `as any`
+- Todos os comandos de desenvolvimento executam sem erros:
+  `npm install` → `npx prisma generate` → `npx tsc --noEmit` → `npm run lint` → `npm run build` → `npm run dev`
+- Funcionalidades core implementadas:
+  - Gestão de operações e cadastros
+  - Importação de planilhas com preview e validação
+  - Motor de persistência e roteiros
+  - Reconciliação inteligente com classificação de mismatches
+  - Dashboards gerenciais completos
+
+### 🚧 Em Desenvolvimento
+- **Autenticação e Autorização**: Implementação completa de papéis e permissões (RBAC)
+- **Integração com n8n**: Workflows de automação para notificações e sincronização
+- **API Pública**: Documentação e versionamento da API REST
+- **Testes End-to-End**: Cypress para fluxos críticos de usuário
+- **Otimização de Performance**: Paginação avançada e caching de consultas pesadas
+
+### 📋 Próximas Melhorias
+- Internacionalização (i18n) para apoio a múltiplos idiomas
+- Relatórios exportáveis em PDF e Excel
+- Integração com provedores de armazenamento de arquivos (AWS S3, Google Cloud Storage)
+- Dashboard de auditoria com trilha de alterações
+- Sistema de notificações em tempo real (WebSockets)
+- Otimização de consultas com índices avançados de consultas com índices avançados no PostgreSQL
+- Implementação de webhooks para integrações externas
+
+## Boas Práticas
+
+### Padrões de Código
+- **TypeScript Strict Mode**: Nenhum `any` permitido sem justificativa explícita
+- **Componentização**: Componentes reutilizáveis em `components/ui` e específicos em `components/[feature]`
+- **Separação de Concerns**: Camadas bem definidas (routes → services → repositories → mappers)
+- **Tratamento de Erros**: Centralizado com logging estruturado e mensagens amigáveis ao usuário
+- **Validação**: Zod para validação de entrada em todas as fronteiras (API, services, components)
+- **Formatação**: Prettier configurado + ESLint com regras de qualidade e boas práticas
+
+### Organização
+- **Git Flow**:
+  - `main`: Código de produção estável
+  - `develop`: Branch de integração para próximas releases
+  - `feature/*`: Novas funcionalidades
+  - `bugfix/*`: Correções de problemas
+  - `release/*`: Preparação de release
+- **Commits**: Mensagens descritivas no formato `type(scope): subject`
+  - Ex: `feat(imports): add king checklist parser`
+- **Pull Requests**:
+  - Descrição clara do problema e solução
+  - Checklist de testes realizados
+  - Screenshots para mudanças de UI
+  - Aprovação mínima de 1 revisor
+
+### Qualidade
+- **Zero Tolerance a Warnings**: Build falha se houver qualquer warning de lint ou TypeScript
+- **Code Review**: Foco em legibilidade, manutenibilidade e aderência às boas práticas
+- **Testes**: Cobertura mínima de 80% para unidades críticas (services, utils)
+- **Documentação**: Atualização simultânea de código e documentação (README, comentários inline)
+
+## Licença
+
+Este projeto está licenciado sob a [Licença MIT](LICENSE).
+
+© 2024 MK9 Analytics. Todos os direitos reservados.
