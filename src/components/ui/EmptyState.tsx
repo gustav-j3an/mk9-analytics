@@ -16,14 +16,14 @@ export const EmptyState = ({
   title,
   description,
   action,
-  icon = <Database className="h-5 w-5 text-[#71717A]" />,
+  icon = <Database className="h-5 w-5 text-[var(--mk-text-subtle)]" />,
 }: EmptyStateProps) => {
   return (
     <div className="flex flex-col items-center justify-center space-y-3 empty-state rounded-2xl border p-8 text-center sm:p-12">
-      <div className="rounded-xl bg-[#F4F4F5] p-3">{icon}</div>
+      <div className="rounded-xl bg-[var(--mk-bg-secondary)] p-3 text-[var(--mk-primary)]">{icon}</div>
       <div className="max-w-md space-y-1">
-        <h4 className="text-xs font-bold text-[#09090B] uppercase tracking-wider">{title}</h4>
-        <p className="text-xs font-semibold leading-5 text-[#71717A]">{description}</p>
+        <h4 className="text-xs font-bold text-[var(--mk-text)] uppercase tracking-wider">{title}</h4>
+        <p className="text-xs leading-5 text-[var(--mk-text-secondary)]">{description}</p>
       </div>
       {action && (
         <Button variant="outline" size="sm" onClick={action.onClick} className="mt-2">

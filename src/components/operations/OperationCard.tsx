@@ -1,6 +1,2 @@
-import type { OperationsStatsData } from '@/modules/operations/dashboard/operations-dashboard.types';
-
-export function OperationCard({ stats }: { stats: OperationsStatsData }) {
-  const items = [['Total', stats.totalCount], ['Planejadas', stats.planningCount], ['Ativas', stats.activeCount], ['Finalizadas', stats.finishedCount], ['Arquivadas', stats.archivedCount]] as const;
-  return <section className="grid overflow-hidden rounded-md border bg-white sm:grid-cols-2 xl:grid-cols-5">{items.map(([label, value]) => <div key={label} className="border-b border-r p-4"><p className="text-[11px] text-[#73736f]">{label}</p><p className="mt-2 text-2xl font-semibold">{value}</p></div>)}</section>;
-}
+import type{OperationsStatsData}from'@/modules/operations/dashboard/operations-dashboard.types';import{Archive,CheckCircle2,ClipboardList,PlayCircle,Timer}from'lucide-react';
+export function OperationCard({stats}:{stats:OperationsStatsData}){const items=[['Total',stats.totalCount,ClipboardList],['Planejadas',stats.planningCount,Timer],['Ativas',stats.activeCount,PlayCircle],['Finalizadas',stats.finishedCount,CheckCircle2],['Arquivadas',stats.archivedCount,Archive]] as const;return <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">{items.map(([label,value,Icon])=><article key={label} className="mk-kpi"><div className="flex items-start justify-between"><div><p className="mk-label">{label}</p><p className="mt-2 text-2xl font-bold tabular-nums">{value}</p></div><span className="mk-kpi-icon"><Icon className="h-4 w-4"/></span></div></article>)}</section>}

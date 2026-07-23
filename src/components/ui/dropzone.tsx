@@ -38,7 +38,7 @@ export const Dropzone = React.forwardRef<HTMLDivElement, DropzoneProps>(
     return (
       <div
         ref={ref}
-        className={className}
+        className={`rounded-2xl border border-dashed border-[var(--mk-border-strong)] bg-[var(--mk-bg-secondary)] transition hover:border-[var(--mk-primary)] hover:bg-[var(--mk-hover)] ${className ?? ""}`}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}

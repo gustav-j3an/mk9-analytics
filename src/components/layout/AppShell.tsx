@@ -34,7 +34,7 @@ export const AppShell = ({ children }: AppShellProps) => {
       {/* Desktop/Tablet Sidebar */}
       <aside
         className={`hidden lg:block shrink-0 transition-all duration-300 ${
-          collapsed ? 'w-16' : 'w-60'
+          collapsed ? 'w-[72px]' : 'w-64'
         }`}
       >
         <div className="sticky top-0 h-screen">

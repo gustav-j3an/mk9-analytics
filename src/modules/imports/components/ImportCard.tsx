@@ -23,6 +23,7 @@ export default function ImportCard({ onSuccess, operations = [] }: Props = {}) {
   const [confirming, setConfirming] = useState(false);
   const [confirmation, setConfirmation] = useState<ImportConfirmationResponse | null>(null);
   const [operationId, setOperationId] = useState('');
+  const [renderedAt] = useState(() => Date.now());
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -142,7 +143,7 @@ export default function ImportCard({ onSuccess, operations = [] }: Props = {}) {
   };
 
   if (preview) {
-    const expired = new Date(preview.expiresAt).getTime() <= Date.now();
+    const expired = new Date(preview.expiresAt).getTime() <= renderedAt;
     const persistence = confirmation?.persistence;
     return (
       <div className="space-y-6">

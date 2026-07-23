@@ -1,5 +1,3 @@
-import React from 'react';
-import Link from 'next/link';
-
-interface NavItemProps { href: string; label: string; icon: React.ReactNode; active: boolean; collapsed?: boolean; }
-export const NavItem = ({ href, label, icon, active, collapsed = false }: NavItemProps) => <Link href={href} aria-current={active ? 'page' : undefined} title={collapsed ? label : undefined} className={`group flex items-center gap-3 rounded-md px-3 py-2 text-[13px] font-medium transition-colors ${active ? 'bg-white/[0.07] text-white' : 'text-[#9d9d98] hover:bg-white/[0.04] hover:text-[#e7e7e3]'}`}><div className={`shrink-0 ${active ? 'text-white' : 'text-[#73736f] group-hover:text-[#aaa9a4]'}`}>{icon}</div>{!collapsed && <span className="truncate">{label}</span>}</Link>;
+import React from 'react';import Link from 'next/link';
+interface NavItemProps{href:string;label:string;icon:React.ReactNode;active:boolean;collapsed?:boolean}
+export const NavItem=({href,label,icon,active,collapsed=false}:NavItemProps)=><Link href={href} aria-current={active?'page':undefined} title={collapsed?label:undefined} className={`group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-[13px] font-medium transition-all ${active?'bg-[var(--mk-hover)] text-[var(--mk-text)]':'text-[var(--mk-text-secondary)] hover:bg-[var(--mk-hover)] hover:text-[var(--mk-text)]'}`}>{active&&<span className="absolute -left-0.5 h-5 w-0.5 rounded-full bg-[var(--mk-primary)]"/>}<span className={`shrink-0 ${active?'text-[var(--mk-primary)]':'text-[var(--mk-text-subtle)] group-hover:text-[var(--mk-primary)]'}`}>{icon}</span>{!collapsed&&<span className="truncate">{label}</span>}</Link>;

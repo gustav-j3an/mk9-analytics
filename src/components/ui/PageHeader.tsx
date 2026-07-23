@@ -1,23 +1,4 @@
 import React from 'react';
-
-interface PageHeaderProps {
-  title: string;
-  subtitle?: string;
-  category?: string;
-  actions?: React.ReactNode;
-}
-
-export const PageHeader = ({ title, subtitle, category = 'MK9 Analytics', actions }: PageHeaderProps) => {
-  return (
-    <header className="flex flex-col justify-between gap-4 border-b border-[#F4F4F5] pb-6 md:flex-row md:items-end">
-      <div>
-        <span className="text-[10px] font-bold text-[#16A34A] uppercase tracking-wider block">{category}</span>
-        <h1 className="text-2xl font-extrabold text-[#09090B] tracking-tight mt-1">{title}</h1>
-        {subtitle && <p className="text-xs font-semibold text-[#71717A] mt-0.5 max-w-3xl">{subtitle}</p>}
-      </div>
-      {actions && <div className="flex items-center gap-3">{actions}</div>}
-    </header>
-  );
-};
-
+interface PageHeaderProps { title:string; subtitle?:string; category?:string; actions?:React.ReactNode }
+export function PageHeader({title,subtitle,category='MK9 Analytics',actions}:PageHeaderProps){return <header className="flex flex-col justify-between gap-5 border-b border-[var(--mk-border)] pb-6 md:flex-row md:items-end"><div className="max-w-3xl"><span className="mk-label text-[var(--mk-primary)]">{category}</span><h1 className="mt-2 text-2xl font-bold tracking-[-.025em] text-[var(--mk-text)] sm:text-3xl">{title}</h1>{subtitle&&<p className="mt-1.5 text-sm leading-6 text-[var(--mk-text-secondary)]">{subtitle}</p>}</div>{actions&&<div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>}</header>}
 export default PageHeader;

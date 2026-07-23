@@ -20,7 +20,7 @@ export default async function OperacoesPage({ searchParams }: PageProps) {
 
   return (
     <main className="mx-auto w-full max-w-[1440px] min-w-0 space-y-6 px-4 py-7 sm:px-6 lg:px-8 lg:py-9">
-      <PageHeader category="Operação" title="Gestão de operações" subtitle="Planejamento, equipes, clientes e execução de cada operação comercial." actions={<Link href="/dashboard/operacoes/nova" className="rounded-md bg-[#20201f] px-4 py-2.5 text-xs font-medium text-white">Nova operação</Link>} />
+      <PageHeader category="Operação" title="Gestão de operações" subtitle="Planejamento, equipes, clientes e execução de cada operação comercial." actions={<Link href="/dashboard/operacoes/nova" className="mk-primary-button">Nova operação</Link>} />
       <OperationCard stats={stats} />
       <OperationFilters status={status} cliente={cliente} search={search} uniqueClients={uniqueClients} />
       <OperationsTable operations={operations} pagination={pagination} query={{ status, cliente, q: search }} />

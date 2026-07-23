@@ -13,7 +13,7 @@ export const Progress = React.forwardRef<HTMLDivElement, ProgressProps>(
       <div
         ref={ref}
         className={cn(
-          "w-full bg-secondary/20 rounded-full h-2.5 dark:bg-secondary/60",
+          "w-full bg-[var(--mk-bg-secondary)] rounded-full h-2.5",
           className
         )}
         {...props}
@@ -23,7 +23,7 @@ export const Progress = React.forwardRef<HTMLDivElement, ProgressProps>(
         aria-valuenow={value}
       >
         <div
-          className="flex h-2.5 w-0 bg-primary transition-all duration-500 rounded-full"
+          className="flex h-2.5 w-0 bg-[var(--mk-primary)] transition-all duration-500 rounded-full"
           style={{ width: `${value}%` }}
         />
       </div>
