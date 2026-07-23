@@ -1,5 +1,5 @@
 import { PageHeader } from '@/components/ui/PageHeader';
-import { WeeklyRouteCalendar } from '@/components/routes/WeeklyRouteCalendar';
+import { RoutesWorkspace } from '@/components/routes/RoutesWorkspace';
 import { RoutesDashboardService } from '@/modules/routes/dashboard/RoutesDashboardService';
 
 export const dynamic = 'force-dynamic';
@@ -21,6 +21,6 @@ export default async function RoteirosPage({ searchParams }: PageProps) {
       </form>
       <p className="mt-3 text-xs text-[var(--mk-text-subtle)]">{data.total} visita(s) no roteiro filtrado.</p>
     </section>
-    <WeeklyRouteCalendar days={data.days} />
+    <RoutesWorkspace days={data.days} />
   </main>;
 }
