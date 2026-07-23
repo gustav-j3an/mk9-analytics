@@ -2,5 +2,77 @@
 import{Calendar,ChevronLeft,ChevronRight,ClipboardCheck,ClipboardList,Factory,LayoutDashboard,Store,Upload,Users,X}from'lucide-react';import{usePathname}from'next/navigation';import{NavItem}from'./NavItem';
 interface SidebarProps{collapsed?:boolean;onToggleCollapse?:()=>void;onCloseMobile?:()=>void}
 const sections=[{title:'Visão geral',items:[{href:'/dashboard',label:'Dashboard',icon:LayoutDashboard}]},{title:'Operação',items:[{href:'/dashboard/operacoes',label:'Operações',icon:ClipboardList},{href:'/dashboard/roteiros',label:'Roteiros',icon:Calendar},{href:'/dashboard/conciliacao',label:'Conciliação',icon:ClipboardCheck},{href:'/dashboard/visitas',label:'Visitas',icon:Calendar},{href:'/dashboard/importacoes',label:'Importações',icon:Upload}]},{title:'Cadastros',items:[{href:'/dashboard/promotores',label:'Promotores',icon:Users},{href:'/dashboard/lojas',label:'Lojas',icon:Store},{href:'/dashboard/industrias',label:'Indústrias',icon:Factory}]}];
-export function Sidebar({collapsed=false,onToggleCollapse=()=>{},onCloseMobile=()=>{}}:SidebarProps){const pathname=usePathname();return <div className="sidebar flex h-full flex-col border-r px-2.5 py-4"><div className="mb-5 flex h-11 items-center justify-between border-b border-[var(--mk-border)] px-2 pb-4"><div className="flex items-center gap-2.5"><div className="flex h-8 w-8 items-center justify-center rounded-xl bg-[var(--mk-primary)] text-[11px] font-black text-[#25231F] shadow-[0_5px_16px_var(--mk-focus)]">MK</div>{!collapsed&&<div><p className="text-sm font-bold tracking-tight text-[var(--mk-text)]">MK9 Analytics</p><p className="text-[9px] uppercase tracking-[.12em] text-[var(--mk-text-subtle)]">Gestão operacional</p></div>}</div><button aria-label="Fechar menu" onClick={onCloseMobile} className="icon-button lg:hidden"><X/></button></div><nav className="flex-1 space-y-6 overflow-y-auto px-0.5">{sections.map(section=><div key={section.title} className="space-y-1">{!collapsed&&<span className="mb-2 block px-3 text-[9px] font-bold uppercase tracking-[.15em] text-[var(--mk-text-subtle)]">{section.title}</span>}{section.items.map(item=>{const Icon=item.icon;return <NavItem key={item.href} href={item.href} label={item.label} icon={<Icon className="h-4 w-4"/>} active={pathname===item.href||Boolean(pathname?.startsWith(item.href+'/'))} collapsed={collapsed}/>})}</div>)}</nav><div className="hidden border-t border-[var(--mk-border)] pt-3 lg:block"><button onClick={onToggleCollapse} className="flex w-full items-center justify-center gap-2 rounded-xl p-2 text-xs font-medium text-[var(--mk-text-subtle)] transition hover:bg-[var(--mk-hover)] hover:text-[var(--mk-text)]">{collapsed?<ChevronRight className="h-4 w-4"/>:<ChevronLeft className="h-4 w-4"/>}{!collapsed&&<span>Recolher menu</span>}</button></div></div>}
+export function Sidebar({
+  collapsed = false,
+  onToggleCollapse = () => {},
+  onCloseMobile = () => {},
+}: SidebarProps) {
+  const pathname = usePathname();
+  
+  return (
+    <div className="sidebar flex h-full flex-col border-r px-3.5 py-4">
+      {/* Brand logo container */}
+      <div className="mb-6 flex h-11 items-center justify-between border-b border-[var(--mk-border)] px-2 pb-4">
+        <div className="flex items-center gap-3">
+          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-[var(--mk-primary)] text-[12px] font-black text-white shadow-[0_5px_16px_var(--mk-focus)]">
+            MK
+          </div>
+          {!collapsed && (
+            <div>
+              <p className="text-sm font-bold tracking-tight text-[var(--mk-text)]">MK9 Analytics</p>
+              <p className="text-[9px] uppercase tracking-[.12em] text-[var(--mk-text-subtle)]">
+                Gestão operacional
+              </p>
+            </div>
+          )}
+        </div>
+        <button
+          aria-label="Fechar menu"
+          onClick={onCloseMobile}
+          className="icon-button lg:hidden"
+        >
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+
+      {/* Navigation */}
+      <nav className="flex-1 space-y-6 overflow-y-auto px-0.5">
+        {sections.map((section) => (
+          <div key={section.title} className="space-y-1.5">
+            {!collapsed && (
+              <span className="mb-2.5 block px-3 text-[9px] font-bold uppercase tracking-[0.15em] text-[var(--mk-text-subtle)]">
+                {section.title}
+              </span>
+            )}
+            {section.items.map((item) => {
+              const Icon = item.icon;
+              return (
+                <NavItem
+                  key={item.href}
+                  href={item.href}
+                  label={item.label}
+                  icon={<Icon className="h-4 w-4" />}
+                  active={pathname === item.href || Boolean(pathname?.startsWith(item.href + '/'))}
+                  collapsed={collapsed}
+                />
+              );
+            })}
+          </div>
+        ))}
+      </nav>
+
+      {/* Collapse button */}
+      <div className="hidden border-t border-[var(--mk-border)] pt-3 lg:block">
+        <button
+          onClick={onToggleCollapse}
+          className="flex w-full items-center justify-center gap-2 rounded-xl p-2.5 text-xs font-medium text-[var(--mk-text-subtle)] transition hover:bg-[var(--mk-hover)] hover:text-[var(--mk-text)]"
+        >
+          {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+          {!collapsed && <span>Recolher menu</span>}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default Sidebar;

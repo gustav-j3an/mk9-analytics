@@ -1,24 +1,50 @@
 @import "tailwindcss";
 
 :root {
-  --font-geist: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-geist-mono: 'Geist Mono', 'SFMono-Regular', Consolas, monospace;
-  --mk-bg:#F5F3EF; --mk-bg-secondary:#ECE8E1; --mk-nav:#FFFCF7; --mk-card:#FFFCF7;
-  --mk-card-raised:#FFFFFF; --mk-hover:#F0EBE3; --mk-border:rgba(74,62,48,.12);
-  --mk-border-strong:rgba(74,62,48,.2); --mk-text:#28241F; --mk-text-secondary:#625B52;
-  --mk-text-subtle:#8A8176; --mk-primary:#B86F25; --mk-primary-hover:#A65F1D;
-  --mk-info:#527CAA; --mk-success:#3F8058; --mk-warning:#9B741D; --mk-danger:#B14F4F;
-  --mk-focus:rgba(184,111,37,.28); --mk-shadow:0 10px 30px rgba(69,54,37,.07);
-  color-scheme:light;
+  --font-geist: var(--font-sans), -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-geist-mono: var(--font-mono), monospace;
+  --mk-bg: #F9F9FB;
+  --mk-bg-secondary: #F1F1F4;
+  --mk-nav: #FFFFFF;
+  --mk-card: #FFFFFF;
+  --mk-card-raised: #FFFFFF;
+  --mk-hover: #F4F4F5;
+  --mk-border: rgba(24, 24, 27, 0.08);
+  --mk-border-strong: rgba(24, 24, 27, 0.14);
+  --mk-text: #09090B;
+  --mk-text-secondary: #52525B;
+  --mk-text-subtle: #71717A;
+  --mk-primary: #F97316;
+  --mk-primary-hover: #EA580C;
+  --mk-info: #3B82F6;
+  --mk-success: #10B981;
+  --mk-warning: #F59E0B;
+  --mk-danger: #EF4444;
+  --mk-focus: rgba(249, 115, 22, 0.2);
+  --mk-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px 0 rgba(0, 0, 0, 0.03);
+  color-scheme: light;
 }
 html.dark {
-  --mk-bg:#25231F; --mk-bg-secondary:#2D2A25; --mk-nav:#292722; --mk-card:#34312B;
-  --mk-card-raised:#3A362F; --mk-hover:#403B33; --mk-border:rgba(255,244,224,.10);
-  --mk-border-strong:rgba(255,244,224,.16); --mk-text:#FFF8ED; --mk-text-secondary:#D7CFC2;
-  --mk-text-subtle:#A89F92; --mk-primary:#D99A4E; --mk-primary-hover:#E6AB61;
-  --mk-info:#7FA6D9; --mk-success:#72B58A; --mk-warning:#D9B65D; --mk-danger:#D97878;
-  --mk-focus:rgba(217,154,78,.28); --mk-shadow:0 14px 38px rgba(25,21,17,.24);
-  color-scheme:dark;
+  --mk-bg: #09090B;
+  --mk-bg-secondary: #18181B;
+  --mk-nav: #09090B;
+  --mk-card: #18181B;
+  --mk-card-raised: #27272A;
+  --mk-hover: #27272A;
+  --mk-border: rgba(255, 255, 255, 0.08);
+  --mk-border-strong: rgba(255, 255, 255, 0.14);
+  --mk-text: #F4F4F5;
+  --mk-text-secondary: #A1A1AA;
+  --mk-text-subtle: #71717A;
+  --mk-primary: #F97316;
+  --mk-primary-hover: #FB923C;
+  --mk-info: #60A5FA;
+  --mk-success: #34D399;
+  --mk-warning: #FBBF24;
+  --mk-danger: #F87171;
+  --mk-focus: rgba(249, 115, 22, 0.3);
+  --mk-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  color-scheme: dark;
 }
 * { box-sizing:border-box; }
 html,body { margin:0; min-height:100%; font-family:var(--font-geist); background:var(--mk-bg); color:var(--mk-text); -webkit-font-smoothing:antialiased; }
