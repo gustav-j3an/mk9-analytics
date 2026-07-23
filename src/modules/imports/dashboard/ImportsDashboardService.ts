@@ -59,6 +59,9 @@ export class ImportsDashboardService {
           : null,
         operationId: item.operationId,
         operationName: item.operation?.name ?? null,
+        layout: payload?.detectedType ?? 'Não identificado',
+        visits: new Set(item.visitEvidences.map((evidence) => evidence.visitId).filter(Boolean)).size,
+        userName: 'Sistema',
       };
     });
 

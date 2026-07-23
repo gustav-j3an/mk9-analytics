@@ -7,7 +7,7 @@ import Link from 'next/link';
 
 export const dynamic = 'force-dynamic';
 
-interface PageProps { searchParams: Promise<{ status?: string; cliente?: string; q?: string; page?: string; pageSize?: string }> }
+interface PageProps { searchParams: Promise<{ status?: string; cliente?: string; q?: string; page?: string; pageSize?: string; archived?: string; sort?: 'updatedAt'|'name'|'startsAt'|'coverage'; direction?: 'asc'|'desc' }> }
 
 export default async function OperacoesPage({ searchParams }: PageProps) {
   const params = await searchParams;
@@ -16,14 +16,14 @@ export default async function OperacoesPage({ searchParams }: PageProps) {
   const search = params?.q || '';
   const page = Number(params?.page) || 1;
   const pageSize = Number(params?.pageSize) || 10;
-  const { operations, stats, uniqueClients, pagination } = await OperationsDashboardService.getDashboardData({ status, cliente, search, page, pageSize });
+  const { operations, stats, uniqueClients, pagination } = await OperationsDashboardService.getDashboardData({ status, cliente, search, page, pageSize, archived: params.archived, sort: params.sort, direction: params.direction });
 
   return (
     <main className="mx-auto w-full max-w-[1440px] min-w-0 space-y-6 px-4 py-7 sm:px-6 lg:px-8 lg:py-9">
       <PageHeader category="Operação" title="Gestão de operações" subtitle="Planejamento, equipes, clientes e execução de cada operação comercial." actions={<Link href="/dashboard/operacoes/nova" className="mk-primary-button">Nova operação</Link>} />
       <OperationCard stats={stats} />
-      <OperationFilters status={status} cliente={cliente} search={search} uniqueClients={uniqueClients} />
-      <OperationsTable operations={operations} pagination={pagination} query={{ status, cliente, q: search }} />
+      <OperationFilters status={status} cliente={cliente} search={search} uniqueClients={uniqueClients} archived={params.archived} sort={params.sort} direction={params.direction} pageSize={pageSize} />
+      <OperationsTable operations={operations} pagination={pagination} query={{ status, cliente, q: search, archived: params.archived ?? '', sort: params.sort ?? '', direction: params.direction ?? '' }} />
     </main>
   );
 }

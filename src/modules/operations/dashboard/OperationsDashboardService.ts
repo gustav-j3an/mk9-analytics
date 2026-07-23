@@ -1,5 +1,5 @@
 import { OperationsDashboardRepository } from './OperationsDashboardRepository';
-import type { OperationItem, OperationsPagination, OperationsStatsData } from './operations-dashboard.types';
+import type { OperationItem, OperationsPagination, OperationsStatsData, OperationSort, SortDirection } from './operations-dashboard.types';
 
 export class OperationsDashboardService {
   static async getDashboardData(filters: {
@@ -8,6 +8,9 @@ export class OperationsDashboardService {
     search?: string;
     page?: number;
     pageSize?: number;
+    archived?: string;
+    sort?: OperationSort;
+    direction?: SortDirection;
   }): Promise<{
     operations: OperationItem[];
     stats: OperationsStatsData;
@@ -32,12 +35,15 @@ export class OperationsDashboardService {
         status: op.status,
         industries: [...new Set(op.visits.map((visit) => visit.industry.name))].sort(),
         supervisorNames: [...new Set(op.visits.map((visit) => visit.promoter.supervisor.name))].sort(),
+        responsible: [...new Set(op.visits.map((visit) => visit.promoter.supervisor.name))].sort().join(', ') || 'Não definido',
         startsAt: op.startsAt.toISOString(),
         endsAt: op.endsAt.toISOString(),
         storesCount: uniqueStoreIds.size,
         promotersCount: uniquePromoterIds.size,
+        industriesCount: new Set(op.visits.map((visit) => visit.industry.name)).size,
         visitsPlannedCount,
         visitsExecutedCount,
+        pendingCount: op.visits.filter((visit) => visit.status === 'PLANEJADA').length,
         coverage,
         createdAt: op.createdAt.toISOString(),
         updatedAt: op.updatedAt.toISOString(),
@@ -59,6 +65,10 @@ export class OperationsDashboardService {
 
     let filteredOperations = operations;
 
+    if (filters.archived !== 'all') {
+      filteredOperations = filteredOperations.filter((op) => op.status !== 'ARCHIVED');
+    }
+
     if (filters.status) {
       filteredOperations = filteredOperations.filter((op) => op.status === filters.status);
     }
@@ -69,8 +79,18 @@ export class OperationsDashboardService {
 
     if (filters.search) {
       const query = filters.search.toLowerCase();
-      filteredOperations = filteredOperations.filter((op) => op.name.toLowerCase().includes(query));
+      filteredOperations = filteredOperations.filter((op) =>
+        [op.name, op.clientId ?? '', op.responsible].some((value) => value.toLowerCase().includes(query))
+      );
     }
+
+    const sort = filters.sort ?? 'updatedAt';
+    const direction = filters.direction === 'asc' ? 1 : -1;
+    filteredOperations.sort((a, b) => {
+      const left = sort === 'name' ? a.name : sort === 'coverage' ? a.coverage : Date.parse(a[sort]);
+      const right = sort === 'name' ? b.name : sort === 'coverage' ? b.coverage : Date.parse(b[sort]);
+      return (typeof left === 'string' ? left.localeCompare(String(right), 'pt-BR') : Number(left) - Number(right)) * direction;
+    });
 
     const pageSize = Math.min(50, Math.max(5, filters.pageSize ?? 10));
     const total = filteredOperations.length;

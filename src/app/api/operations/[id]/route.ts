@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { operationService } from '@/modules/operations/services/OperationService';
 import { revalidatePath } from 'next/cache';
+import { deleteEmptyOperation, duplicateOperationConfiguration, getOperationDeletionPreview, OperationLifecycleError } from '@/modules/operations/services/OperationLifecycleService';
+
+function adminAuthorized() {
+  return process.env.NODE_ENV === 'development';
+}
 
 export async function GET(
   request: NextRequest,
@@ -42,18 +47,12 @@ export async function POST(
         { status: 400 }
       );
     }
+    if (!adminAuthorized()) return NextResponse.json({ code: 'ADMIN_AUTH_REQUIRED', error: 'Acesso administrativo necessário.' }, { status: 403 });
 
     let result;
     switch (action) {
       case 'duplicate':
-        const { newMonth, newYear } = await request.json();
-        if (!newMonth || !newYear) {
-          return NextResponse.json(
-            { error: 'newMonth and newYear are required for duplication' },
-            { status: 400 }
-          );
-        }
-        result = await operationService.duplicateOperation(id, parseInt(newMonth), parseInt(newYear));
+        result = await duplicateOperationConfiguration(id);
         break;
       case 'close':
         result = await operationService.closeOperation(id);
@@ -85,6 +84,32 @@ export async function POST(
       { error: error.message || 'Operation failed' },
       { status: error.status || 400 }
     );
+  }
+}
+
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  if (!adminAuthorized()) return NextResponse.json({ code: 'ADMIN_AUTH_REQUIRED', error: 'Acesso administrativo necessário.' }, { status: 403 });
+  const { id } = await params;
+  try {
+    const body = await request.json() as { confirmation?: string };
+    const result = await deleteEmptyOperation(id, body.confirmation ?? '');
+    revalidatePath('/dashboard/operacoes');
+    return NextResponse.json(result);
+  } catch (error) {
+    if (error instanceof OperationLifecycleError) {
+      return NextResponse.json({ code: error.code, error: error.message, impact: error.impact }, { status: error.status });
+    }
+    return NextResponse.json({ code: 'OPERATION_DELETE_FAILED', error: 'Não foi possível excluir a operação.' }, { status: 500 });
+  }
+}
+
+export async function OPTIONS(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  if (!adminAuthorized()) return NextResponse.json({ code: 'ADMIN_AUTH_REQUIRED', error: 'Acesso administrativo necessário.' }, { status: 403 });
+  try {
+    return NextResponse.json(await getOperationDeletionPreview((await params).id));
+  } catch (error) {
+    if (error instanceof OperationLifecycleError) return NextResponse.json({ code: error.code, error: error.message }, { status: error.status });
+    return NextResponse.json({ code: 'OPERATION_DELETE_FAILED', error: 'Não foi possível analisar a operação.' }, { status: 500 });
   }
 }
 

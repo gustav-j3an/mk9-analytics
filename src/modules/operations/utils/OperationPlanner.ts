@@ -132,7 +132,13 @@ export class OperationPlanner {
                 industryId: industry.id,
                 scheduledDate: visitDate,
                 status: 'PLANEJADA' as VisitStatus,
-                completedDate: null
+                completedDate: null,
+                routeOrder: null,
+                weeklyFrequency: 1,
+                plannedTime: null,
+                estimatedDurationMinutes: null,
+                notes: null,
+                manualOverrideReason: null,
               };
 
               visitsToCreate.push(visit);

@@ -88,6 +88,11 @@ export const operationService = {
             promoter: { include: { supervisor: true } },
           },
         },
+        promoters: { include: { supervisor: true }, orderBy: { name: 'asc' } },
+        evidences: {
+          orderBy: { createdAt: 'desc' },
+          include: { audits: { orderBy: { createdAt: 'desc' } }, store: true, industry: true, visit: true },
+        },
       },
     });
     if (!operation) {
@@ -146,9 +151,7 @@ export const operationService = {
   },
 
   async deleteOperation(id: string) {
-    await prisma.visit.deleteMany({ where: { operationId: id } });
-    await prisma.operation.delete({ where: { id } });
-    return { success: true };
+    throw new Error('Use deleteEmptyOperation para exclusão administrativa segura.');
   },
 
   async duplicateOperation(id: string, newMonth: number, newYear: number) {
@@ -221,6 +224,12 @@ export const operationService = {
           status: true,
           scheduledDate: true,
           completedDate: true,
+          routeOrder: true,
+          weeklyFrequency: true,
+          plannedTime: true,
+          estimatedDurationMinutes: true,
+          notes: true,
+          manualOverrideReason: true,
           createdAt: true,
           updatedAt: true,
           promoter: {

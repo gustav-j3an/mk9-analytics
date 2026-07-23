@@ -87,11 +87,19 @@ model Visit {
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
   operationId   String
+  routeOrder    Int?
+  weeklyFrequency Int          @default(1)
+  plannedTime   String?
+  estimatedDurationMinutes Int?
+  notes         String?
+  manualOverrideReason String?
   industry      Industry        @relation(fields: [industryId], references: [id])
   operation     Operation       @relation(fields: [operationId], references: [id])
   promoter      Promoter        @relation(fields: [promoterId], references: [id])
   store         Store           @relation(fields: [storeId], references: [id])
   evidences     VisitEvidence[]
+
+  @@index([operationId, promoterId, scheduledDate, routeOrder])
 }
 
 model Operation {

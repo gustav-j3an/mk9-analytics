@@ -13,6 +13,7 @@ export class ImportsDashboardRepository {
         files: true,
         previewArtifacts: true,
         confirmations: true,
+        visitEvidences: { select: { visitId: true } },
         operation: { select: { id: true, name: true } },
       },
     });

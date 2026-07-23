@@ -12,6 +12,9 @@ export interface ImportItem {
   confirmedAt: string | null;
   operationId: string | null;
   operationName: string | null;
+  layout: string;
+  visits: number;
+  userName: string;
 }
 
 export interface ImportsStatsData {

@@ -7,12 +7,15 @@ export interface OperationItem {
   status: OperationStatus;
   industries: string[];
   supervisorNames: string[];
+  responsible: string;
   startsAt: string;
   endsAt: string;
   storesCount: number;
   promotersCount: number;
+  industriesCount: number;
   visitsPlannedCount: number;
   visitsExecutedCount: number;
+  pendingCount: number;
   coverage: number;
   createdAt: string;
   updatedAt: string;
@@ -32,3 +35,6 @@ export interface OperationsPagination {
   total: number;
   totalPages: number;
 }
+
+export type OperationSort = 'updatedAt' | 'name' | 'startsAt' | 'coverage';
+export type SortDirection = 'asc' | 'desc';
