@@ -35,12 +35,12 @@ export default async function ImportsPage() {
         </div>
 
         {/* Dropzone Container */}
-        <section className="bg-white border border-[#F4F4F5] rounded-2xl p-6 shadow-[0_1px_3px_rgba(0,0,0,0.01),_0_1px_2px_rgba(0,0,0,0.005)]">
+        <section className="bg-white border border-[#F4F4F5] rounded-2xl p-6 shadow-[0_1px_3px_rgba(30,31,34,0.04),_0_1px_2px_rgba(30,31,34,0.02)]">
           <ImportCard operations={operations} />
         </section>
 
         {/* Recent Imports List */}
-        <section className="bg-white border border-[#F4F4F5] rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.01),_0_1px_2px_rgba(0,0,0,0.005)] overflow-hidden">
+        <section className="bg-white border border-[#F4F4F5] rounded-2xl shadow-[0_1px_3px_rgba(30,31,34,0.04),_0_1px_2px_rgba(30,31,34,0.02)] overflow-hidden">
           <header className="border-b border-[#F4F4F5] px-6 py-4">
             <h2 className="text-xs font-bold text-[#09090B] uppercase tracking-wider">Importações Recentes</h2>
             <p className="mt-0.5 text-[10px] font-semibold text-[#A1A1AA]">Últimos registros criados pelo fluxo de upload</p>

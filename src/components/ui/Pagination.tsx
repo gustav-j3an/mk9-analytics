@@ -11,9 +11,9 @@ interface PaginationProps {
 export const Pagination = ({ currentPage, totalPages, onPageChange }: PaginationProps) => {
   return (
     <div className="flex items-center justify-between">
-      <span className="text-xs text-gray-500 font-medium">
-        Página <span className="font-semibold text-gray-900">{currentPage}</span> de{' '}
-        <span className="font-semibold text-gray-900">{totalPages}</span>
+      <span className="text-xs text-gray-500 dark:text-[#C7C7C7] font-medium">
+        Página <span className="font-semibold text-gray-900 dark:text-[#F5F5F5]">{currentPage}</span> de{' '}
+        <span className="font-semibold text-gray-900 dark:text-[#F5F5F5]">{totalPages}</span>
       </span>
       <div className="flex items-center gap-2">
         <Button

@@ -8,17 +8,17 @@ const badgeVariants = cva(
     variants: {
       variant: {
         default:
-          "border-transparent bg-[#09090B] text-white",
+          "border-transparent bg-[#18181B] text-white dark:bg-[#4F8CFF] dark:text-[#F5F5F5]",
         secondary:
-          "border-transparent bg-[#F4F4F5] text-[#18181B]",
+          "border-transparent bg-[#F4F4F5] text-[#18181B] dark:bg-[#32353A] dark:text-[#F5F5F5]",
         destructive:
-          "border-[#FEE2E2] bg-[#FEF2F2] text-[#EF4444]",
-        outline: "border-[#E4E4E7] text-[#71717A] bg-transparent",
-        success: "border-[#DCFCE7] bg-[#F0FDF4] text-[#16A34A]",
-        warning: "border-[#FEF3C7] bg-[#FFFBEB] text-[#D97706]",
-        danger: "border-[#FEE2E2] bg-[#FEF2F2] text-[#EF4444]",
-        info: "border-[#DBEAFE] bg-[#EFF6FF] text-[#3B82F6]",
-        neutral: "border-[#E4E4E7] bg-[#F4F4F5] text-[#71717A]",
+          "border-[#FEE2E2] bg-[#FEF2F2] text-[#EF4444] dark:border-[#EF5350]/40 dark:bg-[#EF5350]/15 dark:text-[#FF7774]",
+        outline: "border-[#E4E4E7] text-[#71717A] bg-transparent dark:border-[#3B3E45] dark:text-[#C7C7C7]",
+        success: "border-[#DCFCE7] bg-[#F0FDF4] text-[#16A34A] dark:border-[#4CAF50]/40 dark:bg-[#4CAF50]/15 dark:text-[#6BCB70]",
+        warning: "border-[#FEF3C7] bg-[#FFFBEB] text-[#D97706] dark:border-[#FFB74D]/40 dark:bg-[#FFB74D]/15 dark:text-[#FFB74D]",
+        danger: "border-[#FEE2E2] bg-[#FEF2F2] text-[#EF4444] dark:border-[#EF5350]/40 dark:bg-[#EF5350]/15 dark:text-[#FF7774]",
+        info: "border-[#DBEAFE] bg-[#EFF6FF] text-[#3B82F6] dark:border-[#4F8CFF]/40 dark:bg-[#4F8CFF]/15 dark:text-[#76A7FF]",
+        neutral: "border-[#E4E4E7] bg-[#F4F4F5] text-[#71717A] dark:border-[#3B3E45] dark:bg-[#32353A] dark:text-[#C7C7C7]",
       },
     },
     defaultVariants: {

@@ -33,14 +33,14 @@ export const ConfirmDialog = ({
       <div className="fixed inset-0 bg-gray-900/40 backdrop-blur-xs transition-opacity" onClick={onCancel} />
 
       {/* Modal Card */}
-      <div className="relative bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-gray-100 z-10 space-y-4 animate-scaleUp">
+      <div role="dialog" aria-modal="true" aria-labelledby="confirm-dialog-title" className="mk-dialog relative bg-white dark:bg-[#2A2D31] rounded-2xl max-w-md w-full p-6 shadow-xl border border-gray-100 dark:border-[#3B3E45] z-10 space-y-4 animate-scaleUp">
         <div className="flex items-start gap-4">
-          <div className={`p-3 rounded-full ${danger ? 'bg-rose-50 text-rose-600' : 'bg-green-50 text-green-600'}`}>
+          <div className={`p-3 rounded-full ${danger ? 'bg-rose-50 text-rose-600 dark:bg-[#EF5350]/15 dark:text-[#FF7774]' : 'bg-green-50 text-green-600 dark:bg-[#4CAF50]/15 dark:text-[#6BCB70]'}`}>
             <AlertTriangle className="w-5 h-5" />
           </div>
           <div className="space-y-1">
-            <h4 className="text-base font-bold text-gray-900">{title}</h4>
-            <p className="text-xs text-gray-500">{description}</p>
+            <h4 id="confirm-dialog-title" className="text-base font-bold text-gray-900 dark:text-[#F5F5F5]">{title}</h4>
+            <p className="text-xs text-gray-500 dark:text-[#C7C7C7]">{description}</p>
           </div>
         </div>
 

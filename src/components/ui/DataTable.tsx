@@ -53,7 +53,7 @@ export function DataTable<T>({
                 return (
                   <th
                     key={idx}
-                    className={`px-5 py-3 text-[10px] font-bold uppercase tracking-wider text-[#A1A1AA] ${
+                    className={`px-5 py-3 text-[10px] font-bold uppercase tracking-wider text-[#A1A1AA] dark:text-[#C7C7C7] ${
                       alignStyles[col.align || 'left']
                     }`}
                   >
@@ -75,7 +75,7 @@ export function DataTable<T>({
                   return (
                     <td
                       key={colIdx}
-                      className={`px-5 py-3.5 text-xs font-semibold text-[#3F3F46] whitespace-nowrap ${
+                      className={`px-5 py-3.5 text-xs font-semibold text-[#3F3F46] dark:text-[#E7E7E7] whitespace-nowrap ${
                         alignStyles[col.align || 'left']
                       }`}
                     >
