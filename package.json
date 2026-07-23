@@ -12,6 +12,8 @@
     "db:generate": "npx prisma generate",
     "db:studio": "npx prisma studio",
     "db:seed": "npx prisma db seed",
+    "data:reset:dry-run": "tsx scripts/reset-operational-data.ts",
+    "data:reset:execute": "tsx scripts/reset-operational-data.ts --execute",
     "postinstall": "prisma generate"
   },
   "dependencies": {

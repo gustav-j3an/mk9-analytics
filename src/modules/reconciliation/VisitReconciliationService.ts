@@ -2,6 +2,8 @@ import { createHash } from 'node:crypto';
 import type { EvidenceInput, ReconciliationDecision, ReconciliationSummary, ResolvedEntity } from './ReconciliationTypes';
 
 export interface ReconciliationRepository {
+  prepare?(inputs: EvidenceInput[]): Promise<void>;
+  flush?(): Promise<void>;
   resolveStore(name: string, state?: string, city?: string): Promise<ResolvedEntity | null>;
   resolveIndustry(name: string): Promise<ResolvedEntity | null>;
   findExact(input: EvidenceInput, storeId: string, industryId: string): Promise<Array<{ id: string; promoterId: string; scheduledDate: Date }>>;
@@ -91,8 +93,10 @@ export class VisitReconciliationService {
   }
 
   async reconcileMany(inputs: EvidenceInput[]): Promise<ReconciliationSummary> {
+    await this.repository.prepare?.(inputs);
     const decisions = [];
     for (const input of inputs) decisions.push(await this.reconcile(input));
+    await this.repository.flush?.();
     return {
       total: decisions.length,
       matched: decisions.filter((item) => item.result === 'MATCHED').length,

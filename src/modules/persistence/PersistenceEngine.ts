@@ -1,5 +1,5 @@
 import { prisma as defaultPrisma } from '@/lib/prisma';
-import type { Prisma, PrismaClient } from '@prisma/client';
+import { Prisma, type PrismaClient } from '@prisma/client';
 import type { PersistencePlan } from './PersistencePlan';
 import type { PersistenceResult } from './PersistenceResult';
 
@@ -13,6 +13,14 @@ function batches<T>(items: T[]): T[][] {
 
 function developmentLog(event: string, details: Record<string, unknown>): void {
   if (process.env.NODE_ENV === 'development') console.info(`[imports:persistence-engine] ${event}`, details);
+}
+
+async function runBatchUpdate(tx: Prisma.TransactionClient, query: Prisma.Sql, fallback: () => Promise<void>) {
+  if (typeof tx.$executeRaw === 'function') {
+    await tx.$executeRaw(query);
+    return;
+  }
+  await fallback();
 }
 
 export class PersistenceEngine {
@@ -43,43 +51,71 @@ export class PersistenceEngine {
             city: store.city,
             state: store.state,
       }));
+      let stageStartedAt = Date.now();
       for (const [index, batch] of batches(storesToCreate).entries()) {
         lastEntity = { type: 'store.createMany', index };
         await tx.store.createMany({ data: batch, skipDuplicates: true });
       }
+      developmentLog('store.createMany', { durationMs: Date.now() - stageStartedAt, rows: storesToCreate.length, batchSize: WRITE_BATCH_SIZE });
 
-      for (const [index, store] of plan.storesToUpdate.entries()) {
+      stageStartedAt = Date.now();
+      for (const [index, batch] of batches(plan.storesToUpdate).entries()) {
         lastEntity = { type: 'store.updateMany', index };
-        await tx.store.updateMany({
-          where: { code: store.code },
-          data: {
-            name: store.name,
-            chain: store.chain,
-            city: store.city,
-            state: store.state,
+        await runBatchUpdate(
+          tx,
+          Prisma.sql`
+            UPDATE "Store" AS target
+            SET "name" = source.name::text, "chain" = source.chain::text,
+                "city" = source.city::text, "state" = source.state::text,
+                "updatedAt" = CURRENT_TIMESTAMP
+            FROM (VALUES ${Prisma.join(batch.map((item) => Prisma.sql`(${item.code}, ${item.name}, ${item.chain}, ${item.city}, ${item.state})`))})
+              AS source(code, name, chain, city, state)
+            WHERE target."code" = source.code::text
+          `,
+          async () => {
+            for (const item of batch) {
+              await tx.store.updateMany({
+                where: { code: item.code },
+                data: { name: item.name, chain: item.chain, city: item.city, state: item.state },
+              });
+            }
           },
-        });
+        );
       }
+      developmentLog('store.updateMany', { durationMs: Date.now() - stageStartedAt, rows: plan.storesToUpdate.length, batchSize: WRITE_BATCH_SIZE });
 
       // 2. Persistir Indústrias
       const industriesToCreate = plan.industriesToCreate.map((ind) => ({
             code: ind.code,
             name: ind.name,
       }));
+      stageStartedAt = Date.now();
       for (const [index, batch] of batches(industriesToCreate).entries()) {
         lastEntity = { type: 'industry.createMany', index };
         await tx.industry.createMany({ data: batch, skipDuplicates: true });
       }
+      developmentLog('industry.createMany', { durationMs: Date.now() - stageStartedAt, rows: industriesToCreate.length, batchSize: WRITE_BATCH_SIZE });
 
-      for (const [index, ind] of plan.industriesToUpdate.entries()) {
+      stageStartedAt = Date.now();
+      for (const [index, batch] of batches(plan.industriesToUpdate).entries()) {
         lastEntity = { type: 'industry.updateMany', index };
-        await tx.industry.updateMany({
-          where: { code: ind.code },
-          data: {
-            name: ind.name,
+        await runBatchUpdate(
+          tx,
+          Prisma.sql`
+            UPDATE "Industry" AS target
+            SET "name" = source.name::text, "updatedAt" = CURRENT_TIMESTAMP
+            FROM (VALUES ${Prisma.join(batch.map((item) => Prisma.sql`(${item.code}, ${item.name})`))})
+              AS source(code, name)
+            WHERE target."code" = source.code::text
+          `,
+          async () => {
+            for (const item of batch) {
+              await tx.industry.updateMany({ where: { code: item.code }, data: { name: item.name } });
+            }
           },
-        });
+        );
       }
+      developmentLog('industry.updateMany', { durationMs: Date.now() - stageStartedAt, rows: plan.industriesToUpdate.length, batchSize: WRITE_BATCH_SIZE });
 
       // 3. Persistir Promotores (resolvendo Supervisor em lote para evitar N+1)
       const uniqueSupervisorNames = Array.from(
@@ -132,10 +168,12 @@ export class PersistenceEngine {
         const supervisorId = supervisorMap.get(supervisorName.toUpperCase()) || '';
         return { name: promoter.name, supervisorId };
       });
+      stageStartedAt = Date.now();
       for (const [index, batch] of batches(promotersToCreate).entries()) {
         lastEntity = { type: 'promoter.createMany', index };
         await tx.promoter.createMany({ data: batch, skipDuplicates: true });
       }
+      developmentLog('promoter.createMany', { durationMs: Date.now() - stageStartedAt, rows: promotersToCreate.length, batchSize: WRITE_BATCH_SIZE });
 
       for (const [index, promoter] of plan.promotersToUpdate.entries()) {
         lastEntity = { type: 'promoter.update', index };
@@ -246,10 +284,12 @@ export class PersistenceEngine {
             completedDate: cv.completed ? scheduledDate : null,
         };
       });
+      stageStartedAt = Date.now();
       for (const [index, batch] of batches(visitsToCreate).entries()) {
         lastEntity = { type: 'visit.createMany', index };
         await tx.visit.createMany({ data: batch });
       }
+      developmentLog('visit.createMany', { durationMs: Date.now() - stageStartedAt, rows: visitsToCreate.length, batchSize: WRITE_BATCH_SIZE });
 
       // 6. Persistir Visitas Atualizadas
       const existingVisits = await tx.visit.findMany({
@@ -293,6 +333,7 @@ export class PersistenceEngine {
         }
       }
 
+      stageStartedAt = Date.now();
       for (const [index, group] of [...visitUpdateGroups.values()].entries()) {
         lastEntity = { type: 'visit.updateMany', index };
         await tx.visit.updateMany({
@@ -300,6 +341,7 @@ export class PersistenceEngine {
           data: { promoterId: group.promoterId, status: group.status, completedDate: group.completedDate },
         });
       }
+      developmentLog('visit.updateMany', { durationMs: Date.now() - stageStartedAt, rows: plan.visitsToUpdate.length, groups: visitUpdateGroups.size });
 
       const durationMs = Date.now() - startTime;
 

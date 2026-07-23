@@ -35,12 +35,14 @@ export async function handleImportConfirmation(request: Request, confirm: Confir
   } catch (error: unknown) {
     if (error instanceof ImportConfirmationError) return errorResponse(error.code, error.message, error.httpStatus);
     const internalCode = error instanceof Error ? (error as Error & { code?: unknown }).code : undefined;
+    const internalMeta = error instanceof Error ? (error as Error & { meta?: unknown }).meta : undefined;
     const details = error instanceof Error
       ? {
           name: error.name,
           message: error.message,
           stack: error.stack,
           code: typeof internalCode === 'string' ? internalCode : undefined,
+          meta: process.env.NODE_ENV === 'development' ? internalMeta : undefined,
         }
       : { name: 'UnknownError', message: String(error), stack: undefined, code: undefined };
     console.error('[imports:confirm] unexpected error', details);

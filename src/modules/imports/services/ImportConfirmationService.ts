@@ -49,11 +49,36 @@ function transactionAdapter(tx: Prisma.TransactionClient): ConfirmationTransacti
   };
 }
 export const prismaConfirmationStore: ConfirmationStore = {
-  transaction: (work) => prisma.$transaction((tx) => work(transactionAdapter(tx)), {
-    isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
-    maxWait: 10_000,
-    timeout: 60_000,
-  }),
+  transaction: async (work) => {
+    const startedAt = Date.now();
+    if (process.env.NODE_ENV === 'development') {
+      console.info('[imports:confirm] transaction:start', { isolationLevel: 'Serializable', maxWaitMs: 10_000, timeoutMs: 60_000 });
+    }
+    try {
+      const result = await prisma.$transaction((tx) => work(transactionAdapter(tx)), {
+        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+        maxWait: 10_000,
+        timeout: 60_000,
+      });
+      if (process.env.NODE_ENV === 'development') {
+        console.info('[imports:confirm] transaction:committed', { durationMs: Date.now() - startedAt });
+      }
+      return result;
+    } catch (error: unknown) {
+      if (process.env.NODE_ENV === 'development') {
+        const details = error as Error & { code?: unknown; meta?: unknown };
+        console.error('[imports:confirm] transaction:failed', {
+          durationMs: Date.now() - startedAt,
+          name: details?.name ?? 'UnknownError',
+          message: details?.message ?? String(error),
+          stack: details?.stack,
+          code: typeof details?.code === 'string' ? details.code : undefined,
+          meta: details?.meta,
+        });
+      }
+      throw error;
+    }
+  },
   findConfirmationByKey: (key) => prisma.importConfirmation.findUnique({ where: { idempotencyKey: key }, include: confirmationInclude }),
   findConfirmationByArtifact: (artifactId) => prisma.importConfirmation.findUnique({ where: { previewArtifactId: artifactId }, include: confirmationInclude }),
   findArtifactByTokenHash: (tokenHash) => prisma.importPreviewArtifact.findUnique({ where: { tokenHash } }),

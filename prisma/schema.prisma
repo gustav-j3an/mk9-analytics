@@ -29,32 +29,34 @@ model Supervisor {
 model Promoter {
   id           String         @id @default(cuid())
   name         String
-  phone        String?
-  email        String?
   city         String?
   state        String?
+  supervisorId String
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  phone        String?
+  email        String?
   status       PromoterStatus @default(ACTIVE)
   archivedAt   DateTime?
   deletedAt    DateTime?
   operationId  String?
-  supervisorId String
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
+  operation    Operation?     @relation(fields: [operationId], references: [id])
   supervisor   Supervisor     @relation(fields: [supervisorId], references: [id])
-  operation    Operation?     @relation(fields: [operationId], references: [id], onDelete: SetNull)
   visits       Visit[]
+
+  @@index([operationId])
 }
 
 model Industry {
   id                  String          @id @default(cuid())
   code                String          @unique
   name                String
-  contractedFrequency Int?
-  archivedAt          DateTime?
   createdAt           DateTime        @default(now())
   updatedAt           DateTime        @updatedAt
-  visits              Visit[]
+  contractedFrequency Int?
+  archivedAt          DateTime?
   aliases             IndustryAlias[]
+  visits              Visit[]
   evidences           VisitEvidence[]
 }
 
@@ -63,14 +65,14 @@ model Store {
   code       String          @unique
   name       String
   chain      String?
-  address    String?
   city       String?
   state      String?
-  archivedAt DateTime?
   createdAt  DateTime        @default(now())
   updatedAt  DateTime        @updatedAt
-  visits     Visit[]
+  address    String?
+  archivedAt DateTime?
   aliases    StoreAlias[]
+  visits     Visit[]
   evidences  VisitEvidence[]
 }
 
@@ -105,10 +107,10 @@ model Operation {
   clientId     String?
   description  String?
   observations String?
-  visits       Visit[]
   imports      Import[]
-  evidences    VisitEvidence[]
   promoters    Promoter[]
+  visits       Visit[]
+  evidences    VisitEvidence[]
 
   @@unique([month, year])
 }
@@ -118,11 +120,11 @@ model Import {
   status           String
   createdAt        DateTime                @default(now())
   updatedAt        DateTime                @updatedAt
+  operationId      String?
+  operation        Operation?              @relation(fields: [operationId], references: [id])
+  confirmations    ImportConfirmation[]
   files            ImportFile[]
   previewArtifacts ImportPreviewArtifact[]
-  confirmations    ImportConfirmation[]
-  operationId      String?
-  operation        Operation?              @relation(fields: [operationId], references: [id], onDelete: SetNull)
   visitEvidences   VisitEvidence[]
 
   @@index([operationId])
@@ -163,11 +165,6 @@ model VisitEvidence {
   sourceRow        Int?
   rawStoreName     String
   rawIndustryName  String
-  rawBrand         String?
-  rawCity          String?
-  rawState         String?
-  suggestion       Json?
-  diagnostics      Json?
   deduplicationKey String                @unique
   result           ReconciliationResult
   confidence       Int                   @default(0)
@@ -175,12 +172,17 @@ model VisitEvidence {
   reviewedBy       String?
   createdAt        DateTime              @default(now())
   updatedAt        DateTime              @updatedAt
-  import           Import                @relation(fields: [importId], references: [id], onDelete: Cascade)
-  operation        Operation             @relation(fields: [operationId], references: [id], onDelete: Cascade)
-  visit            Visit?                @relation(fields: [visitId], references: [id], onDelete: SetNull)
-  store            Store?                @relation(fields: [storeId], references: [id], onDelete: SetNull)
-  industry         Industry?             @relation(fields: [industryId], references: [id], onDelete: SetNull)
+  diagnostics      Json?
+  rawBrand         String?
+  rawCity          String?
+  rawState         String?
+  suggestion       Json?
   audits           ReconciliationAudit[]
+  import           Import                @relation(fields: [importId], references: [id], onDelete: Cascade)
+  industry         Industry?             @relation(fields: [industryId], references: [id])
+  operation        Operation             @relation(fields: [operationId], references: [id], onDelete: Cascade)
+  store            Store?                @relation(fields: [storeId], references: [id])
+  visit            Visit?                @relation(fields: [visitId], references: [id])
 
   @@index([operationId, evidenceDate])
   @@index([visitId])
@@ -222,8 +224,8 @@ model ImportPreviewArtifact {
   expiresAt    DateTime
   consumedAt   DateTime?
   createdAt    DateTime            @default(now())
-  import       Import              @relation(fields: [importId], references: [id], onDelete: Cascade)
   confirmation ImportConfirmation?
+  import       Import              @relation(fields: [importId], references: [id], onDelete: Cascade)
 
   @@index([importId])
   @@index([expiresAt])
@@ -239,7 +241,7 @@ model ImportConfirmation {
   confirmedAt       DateTime              @default(now())
   createdAt         DateTime              @default(now())
   import            Import                @relation(fields: [importId], references: [id], onDelete: Cascade)
-  previewArtifact   ImportPreviewArtifact @relation(fields: [previewArtifactId], references: [id], onDelete: Restrict)
+  previewArtifact   ImportPreviewArtifact @relation(fields: [previewArtifactId], references: [id])
 
   @@index([importId])
 }

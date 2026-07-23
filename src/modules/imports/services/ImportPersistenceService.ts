@@ -47,12 +47,15 @@ export async function persistPreviewArtifact(
   artifact: { importId: string; fileHash: string; payload: Prisma.JsonValue; rejectedRows: number },
 ): Promise<ImportPersistenceSummary> {
   const payload = artifact.payload as unknown as PreviewArtifactPayload;
+  const persistenceStartedAt = Date.now();
   const isRouteWorkbook = payload.detectedType === SpreadsheetType.ROTEIRO_PROMOTORES;
   const dateColumns = payload.columns.map((column) => ({ column, date: dateFromColumn(column) })).filter((item) => item.date !== null);
   if (!isRouteWorkbook && dateColumns.length === 0) throw new Error('O preview não contém colunas de datas persistíveis.');
 
   const fileName = text(payload.file.name) || 'Importação de roteiro';
+  const existingLookupStartedAt = Date.now();
   const linkedImport = await tx.import.findUnique({ where: { id: artifact.importId }, include: { operation: true } });
+  developmentLog('existing-records', { durationMs: Date.now() - existingLookupStartedAt });
   let operation: { id: string; startsAt: Date; endsAt: Date };
   if (isRouteWorkbook) {
     if (!linkedImport?.operation) throw new Error('Selecione uma operação antes de confirmar uma planilha de roteiro.');
@@ -134,8 +137,10 @@ export async function persistPreviewArtifact(
     duplicatePromotersRemoved: candidate.statistics.duplicatedPromoters,
     duplicateVisitsRemoved: candidate.statistics.duplicatedVisits,
   });
+  const planStartedAt = Date.now();
   const plan = await PersistencePlanner.plan(candidate, operation.id, tx as never);
   developmentLog('plan', {
+    durationMs: Date.now() - planStartedAt,
     storesToCreate: plan.storesToCreate.length,
     storesToUpdate: plan.storesToUpdate.length,
     industriesToCreate: plan.industriesToCreate.length,
@@ -145,7 +150,9 @@ export async function persistPreviewArtifact(
     visitsToCreate: plan.visitsToCreate.length,
     visitsToUpdate: plan.visitsToUpdate.length,
   });
+  const engineStartedAt = Date.now();
   const result = await PersistenceEngine.persist(plan, operation.id, tx as never);
+  developmentLog('engine', { durationMs: Date.now() - engineStartedAt });
   let reconciliationMatched = 0;
   if (!isRouteWorkbook) {
     const evidenceInputs: EvidenceInput[] = [];
@@ -172,9 +179,10 @@ export async function persistPreviewArtifact(
         });
       }
     }
+    const reconciliationStartedAt = Date.now();
     const reconciliation = await new VisitReconciliationService(new VisitMatchRepository(tx)).reconcileMany(evidenceInputs);
     reconciliationMatched = reconciliation.matched;
-    developmentLog('reconciliation', { ...reconciliation });
+    developmentLog('reconciliation', { durationMs: Date.now() - reconciliationStartedAt, batchSize: 200, ...reconciliation });
   }
 
   await tx.importFile.upsert({
@@ -182,7 +190,10 @@ export async function persistPreviewArtifact(
     create: { importId: artifact.importId, fileName, fileHash: artifact.fileHash, rowCount: Number(payload.audit.totalRows ?? payload.rows.length) },
     update: { importId: artifact.importId, fileName, rowCount: Number(payload.audit.totalRows ?? payload.rows.length) },
   });
+  const importUpdateStartedAt = Date.now();
   await tx.import.update({ where: { id: artifact.importId }, data: { status: 'SUCCESS' } });
+  developmentLog('import-update', { durationMs: Date.now() - importUpdateStartedAt });
+  developmentLog('complete', { durationMs: Date.now() - persistenceStartedAt });
 
   return {
     createdStores: result.createdStores,
