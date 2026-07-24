@@ -111,9 +111,11 @@ export async function saveWeeklyRouteBatch(batch: WeeklyRouteBatch) {
       for (const input of batch.upserts) {
         const operation = operations.find((item) => item.id === input.operationId)!;
         const date = new Date(input.scheduledDate);
-        if (date < operation.startsAt || date > operation.endsAt) throw new ManualRouteError('INVALID_ROUTE', 400, 'A data está fora do período da operação.');
-        const promoter = promoters.find((item) => item.id === input.promoterId)!;
-        if (promoter.operationId && promoter.operationId !== input.operationId) throw new ManualRouteError('INVALID_ROUTE', 400, 'Promotor fora da operação.');
+        if (operation.name !== 'MK9 - OPERAÇÃO PADRÃO') {
+          if (date < operation.startsAt || date > operation.endsAt) throw new ManualRouteError('INVALID_ROUTE', 400, 'A data está fora do período da operação.');
+          const promoter = promoters.find((item) => item.id === input.promoterId)!;
+          if (promoter.operationId && promoter.operationId !== input.operationId) throw new ManualRouteError('INVALID_ROUTE', 400, 'Promotor fora da operação.');
+        }
       }
       const inputIds = batch.upserts.map((item) => item.id).filter((id): id is string => Boolean(id));
       const dates = batch.upserts.map((item) => new Date(item.scheduledDate).getTime());

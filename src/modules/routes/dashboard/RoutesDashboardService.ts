@@ -1,4 +1,19 @@
 import { RoutesDashboardRepository, type RouteFilters } from './RoutesDashboardRepository';
+export function normalizeManualVisitFields(visit: {
+  routeOrder?: number | null;
+  weeklyFrequency?: number | null;
+  plannedTime?: string | null;
+  estimatedDurationMinutes?: number | null;
+  notes?: string | null;
+}) {
+  return {
+    routeOrder: visit.routeOrder ?? null,
+    weeklyFrequency: visit.weeklyFrequency ?? 1,
+    plannedTime: visit.plannedTime ?? null,
+    estimatedDurationMinutes: visit.estimatedDurationMinutes ?? null,
+    notes: visit.notes ?? null,
+  };
+}
 
 export const WEEK_DAYS = [
   { value: 1, label: 'Segunda' },
@@ -29,11 +44,7 @@ export class RoutesDashboardService {
         operation: visit.operation.name,
         scheduledDate: visit.scheduledDate.toISOString(),
         status: visit.status,
-        routeOrder: (visit as typeof visit & { routeOrder?: number | null }).routeOrder ?? null,
-        weeklyFrequency: (visit as typeof visit & { weeklyFrequency?: number }).weeklyFrequency ?? 1,
-        plannedTime: (visit as typeof visit & { plannedTime?: string | null }).plannedTime ?? null,
-        estimatedDurationMinutes: (visit as typeof visit & { estimatedDurationMinutes?: number | null }).estimatedDurationMinutes ?? null,
-        notes: (visit as typeof visit & { notes?: string | null }).notes ?? null,
+        ...normalizeManualVisitFields(visit),
       })),
     }));
     return { days, options, total: visits.length };

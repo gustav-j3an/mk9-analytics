@@ -9,12 +9,16 @@ export class VisitsDashboardService {
     status?: string;
     startDate?: string;
     endDate?: string;
+    industry?: string;
+    store?: string;
   }): Promise<{
     visits: VisitItem[];
     summary: VisitsSummaryData;
     uniquePromoters: string[];
     uniqueSupervisors: string[];
     uniqueOperations: string[];
+    uniqueIndustries: string[];
+    uniqueStores: string[];
   }> {
     const rawVisits = await VisitsDashboardRepository.getVisitsList();
 
@@ -45,7 +49,9 @@ export class VisitsDashboardService {
 
     const uniquePromoters = Array.from(new Set(visits.map((v) => v.promoterName))).sort();
     const uniqueSupervisors = Array.from(new Set(visits.map((v) => v.supervisorName))).sort();
-    const uniqueOperations = Array.from(new Set(visits.map((v) => v.operationName))).sort();
+    const uniqueOperations = Array.from(new Set(visits.map((v) => v.operationName).filter(x => x !== 'MK9 - OPERAÇÃO PADRÃO'))).sort();
+    const uniqueIndustries = Array.from(new Set(visits.map((v) => v.industryName))).sort();
+    const uniqueStores = Array.from(new Set(visits.map((v) => v.storeName))).sort();
 
     let filteredVisits = visits;
     const now = new Date();
@@ -58,6 +64,12 @@ export class VisitsDashboardService {
     }
     if (filters.operation) {
       filteredVisits = filteredVisits.filter((v) => v.operationName === filters.operation);
+    }
+    if (filters.industry) {
+      filteredVisits = filteredVisits.filter((v) => v.industryName === filters.industry);
+    }
+    if (filters.store) {
+      filteredVisits = filteredVisits.filter((v) => v.storeName === filters.store);
     }
     if (filters.status) {
       filteredVisits = filteredVisits.filter((v) => v.status === filters.status);
@@ -139,6 +151,8 @@ export class VisitsDashboardService {
       uniquePromoters,
       uniqueSupervisors,
       uniqueOperations,
+      uniqueIndustries,
+      uniqueStores,
     };
   }
 }

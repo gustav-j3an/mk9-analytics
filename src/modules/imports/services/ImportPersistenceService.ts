@@ -15,6 +15,8 @@ import { VisitMatchRepository } from '@/modules/reconciliation/VisitMatchReposit
 import { VisitReconciliationService } from '@/modules/reconciliation/VisitReconciliationService';
 import type { EvidenceInput } from '@/modules/reconciliation/ReconciliationTypes';
 
+import { getOrCreateDefaultOperationIdInTx } from '@/lib/defaultOperation';
+
 export interface ImportPersistenceSummary {
   createdStores: number;
   updatedStores: number;
@@ -57,22 +59,13 @@ export async function persistPreviewArtifact(
   const linkedImport = await tx.import.findUnique({ where: { id: artifact.importId }, include: { operation: true } });
   developmentLog('existing-records', { durationMs: Date.now() - existingLookupStartedAt });
   let operation: { id: string; startsAt: Date; endsAt: Date };
-  if (isRouteWorkbook) {
-    if (!linkedImport?.operation) throw new Error('Selecione uma operação antes de confirmar uma planilha de roteiro.');
-    operation = linkedImport.operation;
-  } else if (linkedImport?.operation) {
+  if (linkedImport?.operation) {
     operation = linkedImport.operation;
   } else {
-    const firstDate = dateColumns[0].date as Date;
-    const year = firstDate.getUTCFullYear();
-    const month = firstDate.getUTCMonth() + 1;
-    const startsAt = new Date(Date.UTC(year, month - 1, 1, 12));
-    const endsAt = new Date(Date.UTC(year, month, 0, 12));
-    operation = await tx.operation.upsert({
-      where: { month_year: { month, year } },
-      create: { name: fileName.replace(/\.[^.]+$/, ''), month, year, startsAt, endsAt, status: 'IN_PROGRESS' },
-      update: { name: fileName.replace(/\.[^.]+$/, ''), startsAt, endsAt, status: 'IN_PROGRESS' },
-    });
+    const defaultOpId = await getOrCreateDefaultOperationIdInTx(tx);
+    const defaultOp = await tx.operation.findUnique({ where: { id: defaultOpId } });
+    if (!defaultOp) throw new Error('Operação padrão não encontrada.');
+    operation = defaultOp;
   }
 
   const stores = [];

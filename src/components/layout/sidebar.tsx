@@ -1,7 +1,7 @@
 'use client';
 import{Calendar,ChevronLeft,ChevronRight,ClipboardCheck,ClipboardList,Factory,LayoutDashboard,Store,Upload,Users,X}from'lucide-react';import{usePathname}from'next/navigation';import{NavItem}from'./NavItem';
 interface SidebarProps{collapsed?:boolean;onToggleCollapse?:()=>void;onCloseMobile?:()=>void}
-const sections=[{title:'Visão geral',items:[{href:'/dashboard',label:'Dashboard',icon:LayoutDashboard}]},{title:'Operação',items:[{href:'/dashboard/operacoes',label:'Operações',icon:ClipboardList},{href:'/dashboard/roteiros',label:'Roteiros',icon:Calendar},{href:'/dashboard/conciliacao',label:'Conciliação',icon:ClipboardCheck},{href:'/dashboard/visitas',label:'Visitas',icon:Calendar},{href:'/dashboard/importacoes',label:'Importações',icon:Upload}]},{title:'Cadastros',items:[{href:'/dashboard/promotores',label:'Promotores',icon:Users},{href:'/dashboard/lojas',label:'Lojas',icon:Store},{href:'/dashboard/industrias',label:'Indústrias',icon:Factory}]}];
+const sections=[{title:'Visão geral',items:[{href:'/dashboard',label:'Dashboard',icon:LayoutDashboard}]},{title:'Operação',items:[{href:'/dashboard/roteiros',label:'Roteiros',icon:Calendar},{href:'/dashboard/conciliacao',label:'Conciliação',icon:ClipboardCheck},{href:'/dashboard/visitas',label:'Visitas',icon:Calendar},{href:'/dashboard/importacoes',label:'Importações',icon:Upload}]},{title:'Cadastros',items:[{href:'/dashboard/promotores',label:'Promotores',icon:Users},{href:'/dashboard/lojas',label:'Lojas',icon:Store},{href:'/dashboard/industrias',label:'Indústrias',icon:Factory}]}];
 export function Sidebar({
   collapsed = false,
   onToggleCollapse = () => {},

@@ -23,7 +23,7 @@ class MemoryStore implements ConfirmationStore {
   confirmations = new Map<string, ConfirmationRecord>();
   failCreate = false;
   operationalWrites = 0;
-  existingOperations = new Set(['operation-1']);
+  existingOperations = new Set(['operation-1', 'default-mock-operation-id']);
   linkedImports = new Map<string, string>();
   persistenceResult = { createdStores: 1, updatedStores: 0, createdIndustries: 1, updatedIndustries: 0, createdPromoters: 0, updatedPromoters: 0, createdVisits: 3, updatedVisits: 0, ignoredDuplicates: 0, ignoredInvalidRows: 1 };
 
@@ -103,11 +103,11 @@ test('confirma importação vinculada a uma operação existente', async () => {
   assert.equal(store.linkedImports.get('import-a'), 'operation-1');
 });
 
-test('confirma importação sem operação e mantém vínculo ausente', async () => {
+test('confirma importação sem operação e vincula à operação padrão', async () => {
   const store = new MemoryStore();
   store.artifacts.set('a', artifact('a', tokenA));
   await confirmImportPreview({ previewToken: tokenA, idempotencyKey: keyA }, store, now);
-  assert.equal(store.linkedImports.has('import-a'), false);
+  assert.equal(store.linkedImports.get('import-a'), 'default-mock-operation-id');
 });
 
 test('rejeita operação inexistente e reverte consumo e persistência', async () => {

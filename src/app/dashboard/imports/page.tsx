@@ -8,11 +8,15 @@ import { ArrowLeft } from 'lucide-react';
 export const dynamic = 'force-dynamic';
 
 export default async function ImportsPage() {
-  const [imports, operations] = await Promise.all([prisma.import.findMany({
-    orderBy: { createdAt: 'desc' },
-    take: 10,
-    include: { _count: { select: { files: true } } },
-  }), prisma.operation.findMany({ orderBy: [{ year: 'desc' }, { month: 'desc' }], select: { id: true, name: true, status: true } })]);
+  const [imports, operations, industries] = await Promise.all([
+    prisma.import.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 10,
+      include: { _count: { select: { files: true } } },
+    }),
+    prisma.operation.findMany({ where: { name: { not: 'MK9 - OPERAÇÃO PADRÃO' } }, orderBy: [{ year: 'desc' }, { month: 'desc' }], select: { id: true, name: true, status: true } }),
+    prisma.industry.findMany({ where: { archivedAt: null }, orderBy: { name: 'asc' }, select: { id: true, name: true } }),
+  ]);
 
   return (
     <div className="min-h-screen bg-[#FAFAFA] p-6 md:p-8 animate-fadeIn">
@@ -36,7 +40,7 @@ export default async function ImportsPage() {
 
         {/* Dropzone Container */}
         <section className="bg-white border border-[#F4F4F5] rounded-2xl p-6 shadow-[0_1px_3px_rgba(30,31,34,0.04),_0_1px_2px_rgba(30,31,34,0.02)]">
-          <ImportCard operations={operations} />
+          <ImportCard operations={operations} industries={industries} />
         </section>
 
         {/* Recent Imports List */}

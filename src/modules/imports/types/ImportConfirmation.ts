@@ -6,7 +6,11 @@ export const ImportConfirmationPayloadSchema = z.object({
     .max(512, 'Token de preview inválido.')
     .regex(/^[A-Za-z0-9_-]+$/, 'Token de preview inválido.'),
   idempotencyKey: z.string().uuid('Chave de idempotência inválida.'),
-  operationId: z.string().min(1, 'Operação inválida.').max(128, 'Operação inválida.').optional(),
+  operationId: z.string().min(1, 'Operação inválida.').max(128, 'Operação inválida.').optional().nullable(),
+  industryId: z.string().min(1, 'Indústria inválida.').max(128, 'Indústria inválida.').optional().nullable(),
+  month: z.number().int().min(1, 'Mês inválido.').max(12, 'Mês inválido.').optional().nullable(),
+  year: z.number().int().min(2000, 'Ano inválido.').max(2100, 'Ano inválido.').optional().nullable(),
+  spreadsheetType: z.string().min(1, 'Tipo de planilha inválido.').max(128, 'Tipo de planilha inválido.').optional().nullable(),
 }).strict();
 
 export type ImportConfirmationPayload = z.infer<typeof ImportConfirmationPayloadSchema>;

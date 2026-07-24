@@ -6,13 +6,14 @@ import { VisitsDashboardService } from '@/modules/visits/dashboard/VisitsDashboa
 
 export const dynamic = 'force-dynamic';
 
-interface PageProps { searchParams: Promise<{ promoter?: string; supervisor?: string; operation?: string; status?: string; startDate?: string; endDate?: string }> }
+interface PageProps { searchParams: Promise<{ promoter?: string; supervisor?: string; status?: string; startDate?: string; endDate?: string; industry?: string; store?: string }> }
 
 export default async function VisitasPage({ searchParams }: PageProps) {
   const params = await searchParams;
   const filters = {
-    promoter: params?.promoter || '', supervisor: params?.supervisor || '', operation: params?.operation || '',
+    promoter: params?.promoter || '', supervisor: params?.supervisor || '',
     status: params?.status || '', startDate: params?.startDate || '', endDate: params?.endDate || '',
+    industry: params?.industry || '', store: params?.store || '',
   };
   const data = await VisitsDashboardService.getDashboardData(filters);
 
@@ -20,7 +21,7 @@ export default async function VisitasPage({ searchParams }: PageProps) {
     <main className="mx-auto w-full max-w-[1440px] min-w-0 space-y-6 px-4 py-7 sm:px-6 lg:px-8 lg:py-9">
       <PageHeader category="Operação" title="Visitas" subtitle="Roteiros planejados, execução e acompanhamento de atrasos." />
       <VisitsSummary summary={data.summary} />
-      <VisitsFilters {...filters} uniquePromoters={data.uniquePromoters} uniqueSupervisors={data.uniqueSupervisors} uniqueOperations={data.uniqueOperations} />
+      <VisitsFilters {...filters} uniquePromoters={data.uniquePromoters} uniqueSupervisors={data.uniqueSupervisors} uniqueIndustries={data.uniqueIndustries} uniqueStores={data.uniqueStores} />
       <VisitsTable visits={data.visits} />
     </main>
   );

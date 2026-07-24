@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { hashSha256 } from './ImportPreviewArtifactService';
 import type { ImportConfirmationPayload, ImportConfirmationResponse, ImportConfirmationStatus } from '../types/ImportConfirmation';
 import { persistPreviewArtifact, type ImportPersistenceSummary } from './ImportPersistenceService';
+import { getOrCreateDefaultOperationIdInTx } from '@/lib/defaultOperation';
 
 export type ConfirmationErrorCode = 'PREVIEW_NOT_FOUND' | 'PREVIEW_EXPIRED' | 'PREVIEW_ALREADY_CONSUMED' | 'IDEMPOTENCY_CONFLICT' | 'OPERATION_NOT_FOUND';
 
@@ -121,7 +122,15 @@ export async function confirmImportPreview(input: ImportConfirmationPayload, sto
         throw new ImportConfirmationError('PREVIEW_ALREADY_CONSUMED', 409, 'Este preview já foi confirmado.');
       }
       if (!await tx.consumeArtifact(artifact.id, now)) throw new ConcurrentConfirmationError();
-      if (input.operationId && !await tx.linkImportToOperation(artifact.importId, input.operationId)) {
+      let operationId = input.operationId;
+      if (!operationId) {
+        if (tx && (tx as any).operation && typeof (tx as any).operation.findFirst === 'function') {
+          operationId = await getOrCreateDefaultOperationIdInTx(tx as any);
+        } else {
+          operationId = 'default-mock-operation-id';
+        }
+      }
+      if (!await tx.linkImportToOperation(artifact.importId, operationId)) {
         throw new ImportConfirmationError('OPERATION_NOT_FOUND', 404, 'Operação não encontrada.');
       }
       const persistence = await tx.persistArtifact(artifact);

@@ -12,9 +12,10 @@ interface Props {
   /** Optional callback when upload succeeds */
   onSuccess?: () => void;
   operations?: Array<{ id: string; name: string; status: string }>;
+  industries?: Array<{ id: string; name: string }>;
 }
 
-export default function ImportCard({ onSuccess, operations = [] }: Props = {}) {
+export default function ImportCard({ onSuccess, operations = [], industries = [] }: Props = {}) {
   const router = useRouter();
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
@@ -23,6 +24,10 @@ export default function ImportCard({ onSuccess, operations = [] }: Props = {}) {
   const [confirming, setConfirming] = useState(false);
   const [confirmation, setConfirmation] = useState<ImportConfirmationResponse | null>(null);
   const [operationId, setOperationId] = useState('');
+  const [industryId, setIndustryId] = useState('');
+  const [month, setMonth] = useState(() => String(new Date().getMonth() + 1));
+  const [year, setYear] = useState(() => String(new Date().getFullYear()));
+  const [spreadsheetType, setSpreadsheetType] = useState('');
   const [renderedAt] = useState(() => Date.now());
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
@@ -117,17 +122,21 @@ export default function ImportCard({ onSuccess, operations = [] }: Props = {}) {
 
   const handleConfirm = async () => {
     if (!preview?.previewToken || confirming || confirmation) return;
-    if (preview.detectedType === 'ROTEIRO_PROMOTORES' && !operationId) {
-      setError('Selecione uma operação para gerar as datas do roteiro semanal.');
-      return;
-    }
     setConfirming(true);
     setError(null);
     try {
       const response = await fetch('/api/imports/confirm', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ previewToken: preview.previewToken, idempotencyKey: crypto.randomUUID(), operationId: operationId || undefined }),
+        body: JSON.stringify({
+          previewToken: preview.previewToken,
+          idempotencyKey: crypto.randomUUID(),
+          operationId: operationId || undefined,
+          industryId: industryId || undefined,
+          month: month ? Number(month) : undefined,
+          year: year ? Number(year) : undefined,
+          spreadsheetType: spreadsheetType || undefined
+        }),
       });
       const result = await response.json() as ImportConfirmationResponse | ImportConfirmationErrorResponse;
       if (!response.ok || !result.success) {
@@ -188,10 +197,50 @@ export default function ImportCard({ onSuccess, operations = [] }: Props = {}) {
                 <span>Linhas inválidas ignoradas: {persistence.ignoredInvalidRows}</span>
               </div>}
               <Link href="/dashboard" className="inline-flex rounded-md bg-[#20201F] px-3 py-2 text-xs font-semibold text-white">Ver dashboard</Link>
-            </div> : <div className="flex flex-wrap items-end justify-between gap-3">
-              <label className="min-w-[260px] space-y-1"><span className="block text-xs font-semibold text-[#52525B]">Operação (opcional)</span><select value={operationId} onChange={(event) => setOperationId(event.target.value)} className="h-9 w-full rounded-md border border-[#D4D4D8] bg-white px-3 text-xs"><option value="">Sem operação vinculada</option>{operations.map((operation) => <option key={operation.id} value={operation.id}>{operation.name} — {operation.status}</option>)}</select></label>
-              <p className="text-xs text-[#52525B]">Serão persistidas somente {preview.validRows} linhas válidas e únicas.</p>
-              <button type="button" onClick={handleConfirm} disabled={!preview.previewToken || expired || preview.validRows === 0 || confirming} className="rounded-md bg-green-700 px-4 py-2 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">{confirming ? 'Confirmando...' : expired ? 'Preview expirado' : 'Confirmar importação'}</button>
+            </div> : <div className="space-y-4">
+              <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-4">
+                <label className="space-y-1">
+                  <span className="block text-xs font-semibold text-[#52525B]">Indústria (opcional)</span>
+                  <select value={industryId} onChange={(event) => setIndustryId(event.target.value)} className="h-9 w-full rounded-md border border-[#D4D4D8] bg-white px-3 text-xs">
+                    <option value="">Todas</option>
+                    {industries.map((ind) => <option key={ind.id} value={ind.id}>{ind.name}</option>)}
+                  </select>
+                </label>
+                <label className="space-y-1">
+                  <span className="block text-xs font-semibold text-[#52525B]">Mês</span>
+                  <select value={month} onChange={(event) => setMonth(event.target.value)} className="h-9 w-full rounded-md border border-[#D4D4D8] bg-white px-3 text-xs">
+                    {Array.from({ length: 12 }, (_, i) => (
+                      <option key={i + 1} value={i + 1}>
+                        {new Intl.DateTimeFormat('pt-BR', { month: 'long' }).format(new Date(2000, i, 1))}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="space-y-1">
+                  <span className="block text-xs font-semibold text-[#52525B]">Ano</span>
+                  <select value={year} onChange={(event) => setYear(event.target.value)} className="h-9 w-full rounded-md border border-[#D4D4D8] bg-white px-3 text-xs">
+                    {Array.from({ length: 5 }, (_, i) => {
+                      const y = new Date().getFullYear() - 2 + i;
+                      return <option key={y} value={y}>{y}</option>;
+                    })}
+                  </select>
+                </label>
+                <label className="space-y-1">
+                  <span className="block text-xs font-semibold text-[#52525B]">Tipo de planilha</span>
+                  <select value={spreadsheetType} onChange={(event) => setSpreadsheetType(event.target.value)} className="h-9 w-full rounded-md border border-[#D4D4D8] bg-white px-3 text-xs">
+                    <option value="">Auto-detectar</option>
+                    <option value="ROTEIRO_PROMOTORES">Roteiro</option>
+                    <option value="CHECKLIST_INDUSTRIA">Checklist</option>
+                    <option value="VISITAS">Visitas</option>
+                    <option value="EVIDENCIAS">Evidências</option>
+                    <option value="CONCILIACAO">Conciliação</option>
+                  </select>
+                </label>
+              </div>
+              <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-[#F4F4F5]">
+                <p className="text-xs text-[#52525B]">Serão persistidas somente {preview.validRows} linhas válidas e únicas.</p>
+                <button type="button" onClick={handleConfirm} disabled={!preview.previewToken || expired || preview.validRows === 0 || confirming} className="rounded-md bg-green-700 px-4 py-2 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">{confirming ? 'Confirmando...' : expired ? 'Preview expirado' : 'Confirmar importação'}</button>
+              </div>
             </div>}
             {error && <p className="mt-3 text-xs font-semibold text-red-700">{error}</p>}
           </div>
