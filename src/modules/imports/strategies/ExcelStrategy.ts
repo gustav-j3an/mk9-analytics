@@ -104,6 +104,12 @@ export class ExcelStrategy implements ImportStrategy {
     return routeWorkbook ? detectedRouteSheetNames([routeWorkbook]) : ExcelReaderService.getSheetNamesFromBuffer(buffer);
   }
 
+  async getAuxiliaryData(data: ArrayBuffer): Promise<any> {
+    const buffer = Buffer.from(data);
+    const routeWorkbook = parseRouteWorkbook(buffer);
+    return routeWorkbook ? routeWorkbook.auxiliary : undefined;
+  }
+
   async normalize(rawData: unknown[]): Promise<NormalizedImportRow[]> {
     if (!rawData || rawData.length === 0) {
       return [];

@@ -24,6 +24,7 @@ export interface PreviewArtifactPayload extends JsonObject {
   columns: string[];
   rows: Array<{ sourceRow: number | null; data: JsonObject }>;
   audit: JsonObject;
+  auxiliary?: JsonObject;
 }
 
 interface BuildPreviewArtifactInput {
@@ -43,6 +44,7 @@ interface BuildPreviewArtifactInput {
   rowsWithVisits: number;
   errors: ImportValidationError[];
   warnings: string[];
+  auxiliary?: any;
   now?: Date;
 }
 
@@ -125,6 +127,7 @@ export function buildPreviewArtifact(input: BuildPreviewArtifactInput): BuiltPre
     sheets: input.sheets,
     columns: input.columns,
     rows,
+    auxiliary: input.auxiliary ? toJsonValue(input.auxiliary) as JsonObject : undefined,
     audit: {
       totalRows: input.totalRows,
       validRows: input.validRows,

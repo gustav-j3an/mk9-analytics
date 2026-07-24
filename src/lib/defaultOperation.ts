@@ -41,3 +41,30 @@ export async function getOrCreateDefaultOperationIdInTx(tx: any): Promise<string
   });
   return created.id;
 }
+
+export async function getOrCreateDefaultOperationForPeriod(month: number, year: number): Promise<string> {
+  const name = "MK9 - OPERAÇÃO PADRÃO";
+  const defaultOp = await prisma.operation.findFirst({
+    where: { month, year, name },
+    select: { id: true }
+  });
+  if (defaultOp) {
+    return defaultOp.id;
+  }
+  const startsAt = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0));
+  const endsAt = new Date(Date.UTC(year, month, 1, 0, 0, 0));
+  endsAt.setUTCMilliseconds(-1);
+
+  const created = await prisma.operation.create({
+    data: {
+      name,
+      month,
+      year,
+      startsAt,
+      endsAt,
+      status: 'OPEN'
+    },
+    select: { id: true }
+  });
+  return created.id;
+}

@@ -14,6 +14,7 @@ import { isVisitMarked } from '../utils/visit-markers';
 import { VisitMatchRepository } from '@/modules/reconciliation/VisitMatchRepository';
 import { VisitReconciliationService } from '@/modules/reconciliation/VisitReconciliationService';
 import type { EvidenceInput } from '@/modules/reconciliation/ReconciliationTypes';
+import { RoteiroSyncService } from './RoteiroSyncService';
 
 import { getOrCreateDefaultOperationIdInTx } from '@/lib/defaultOperation';
 
@@ -55,6 +56,45 @@ export async function persistPreviewArtifact(
   if (!isRouteWorkbook && dateColumns.length === 0) throw new Error('O preview não contém colunas de datas persistíveis.');
 
   const fileName = text(payload.file.name) || 'Importação de roteiro';
+
+  if (isRouteWorkbook) {
+    const auditObj = (payload.audit ?? {}) as any;
+    const month = auditObj.month ? Number(auditObj.month) : (payload as any).month ? Number((payload as any).month) : new Date().getMonth() + 1;
+    const year = auditObj.year ? Number(auditObj.year) : (payload as any).year ? Number((payload as any).year) : new Date().getFullYear();
+    const syncMode = auditObj.syncMode === 'ADD_ONLY' ? 'ADD_ONLY' : 'FULL_SYNC';
+
+    const syncResult = await RoteiroSyncService.persist(
+      {
+        rows: payload.rows.map((r) => r.data),
+        auxiliary: (payload as any).auxiliary,
+        month,
+        year,
+        syncMode,
+      },
+      'system',
+      artifact.importId
+    );
+
+    await tx.importFile.upsert({
+      where: { fileHash: artifact.fileHash },
+      create: { importId: artifact.importId, fileName, fileHash: artifact.fileHash, rowCount: Number(payload.audit.totalRows ?? payload.rows.length) },
+      update: { importId: artifact.importId, fileName, rowCount: Number(payload.audit.totalRows ?? payload.rows.length) },
+    });
+
+    return {
+      createdStores: syncResult.storesNew,
+      updatedStores: 0,
+      createdIndustries: syncResult.industriesNew,
+      updatedIndustries: 0,
+      createdPromoters: syncResult.promotersNew,
+      updatedPromoters: 0,
+      createdVisits: syncResult.createdVisits,
+      updatedVisits: syncResult.updatedVisits,
+      ignoredDuplicates: 0,
+      ignoredInvalidRows: artifact.rejectedRows,
+    };
+  }
+
   const existingLookupStartedAt = Date.now();
   const linkedImport = await tx.import.findUnique({ where: { id: artifact.importId }, include: { operation: true } });
   developmentLog('existing-records', { durationMs: Date.now() - existingLookupStartedAt });

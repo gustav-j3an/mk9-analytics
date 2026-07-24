@@ -124,10 +124,19 @@ export async function confirmImportPreview(input: ImportConfirmationPayload, sto
       if (!await tx.consumeArtifact(artifact.id, now)) throw new ConcurrentConfirmationError();
       let operationId = input.operationId;
       if (!operationId) {
-        if (tx && (tx as any).operation && typeof (tx as any).operation.findFirst === 'function') {
-          operationId = await getOrCreateDefaultOperationIdInTx(tx as any);
+        const payload = artifact.payload as any;
+        const isRouteWorkbook = payload?.detectedType === 'ROTEIRO_PROMOTORES';
+        if (isRouteWorkbook) {
+          const month = payload?.audit?.month || payload?.month || new Date().getMonth() + 1;
+          const year = payload?.audit?.year || payload?.year || new Date().getFullYear();
+          const { getOrCreateDefaultOperationForPeriod } = require('@/lib/defaultOperation');
+          operationId = await getOrCreateDefaultOperationForPeriod(Number(month), Number(year));
         } else {
-          operationId = 'default-mock-operation-id';
+          if (tx && (tx as any).operation && typeof (tx as any).operation.findFirst === 'function') {
+            operationId = await getOrCreateDefaultOperationIdInTx(tx as any);
+          } else {
+            operationId = 'default-mock-operation-id';
+          }
         }
       }
       if (!await tx.linkImportToOperation(artifact.importId, operationId)) {

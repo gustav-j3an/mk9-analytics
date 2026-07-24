@@ -109,6 +109,7 @@ export class ImportService {
         : dataColumns.filter((column) => /^\d{2}_\d{2}_\d{4}$/.test(column)).length;
       const rowsWithVisits = normalizedData.filter((row) => Number(row.TOTAL_VISITAS_DETECTADAS) > 0).length;
       const sheets = strategy.getSheetNames ? await strategy.getSheetNames(arrayBuffer) : [];
+      const auxiliary = strategy.getAuxiliaryData ? await strategy.getAuxiliaryData(arrayBuffer) : undefined;
       const warnings: string[] = [];
       const kingDivergences = normalizedData.filter((row) => Boolean(row[KING_WARNING_COLUMN])).length;
 
@@ -151,6 +152,7 @@ export class ImportService {
         rowsWithVisits,
         errors,
         warnings,
+        auxiliary,
       });
       const descriptor = createPreviewDescriptor(artifact);
 

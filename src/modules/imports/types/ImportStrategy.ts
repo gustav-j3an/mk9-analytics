@@ -54,6 +54,8 @@ export interface ImportStrategy {
 
   getSheetNames?(data: ArrayBuffer): Promise<string[]>;
 
+  getAuxiliaryData?(data: ArrayBuffer): Promise<any>;
+
   /**
    * Persists the data to the database.
    */
