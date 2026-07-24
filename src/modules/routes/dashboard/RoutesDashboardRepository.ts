@@ -23,12 +23,13 @@ export class RoutesDashboardRepository {
   }
 
   static async getFilterOptions() {
-    const [promoters, operations, industries, stores] = await Promise.all([
-      prisma.promoter.findMany({ where: { deletedAt: null }, orderBy: { name: 'asc' }, select: { id: true, name: true, operationId: true } }),
+    const [promoters, operations, industries, stores, supervisors] = await Promise.all([
+      prisma.promoter.findMany({ where: { deletedAt: null }, orderBy: { name: 'asc' }, select: { id: true, name: true, phone: true, city: true, state: true, operationId: true, _count: { select: { visits: true } } } }),
       prisma.operation.findMany({ orderBy: { startsAt: 'desc' }, select: { id: true, name: true, status: true, startsAt: true, endsAt: true } }),
       prisma.industry.findMany({ where: { archivedAt: null }, orderBy: { name: 'asc' }, select: { id: true, name: true } }),
       prisma.store.findMany({ where: { archivedAt: null }, orderBy: { name: 'asc' }, select: { id: true, name: true, chain: true, city: true, state: true, address: true } }),
+      prisma.supervisor.findMany({ orderBy: { name: 'asc' }, select: { id: true, name: true } }),
     ]);
-    return { promoters, operations, industries, stores };
+    return { promoters, operations, industries, stores, supervisors };
   }
 }

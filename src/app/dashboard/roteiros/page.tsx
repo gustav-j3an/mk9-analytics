@@ -31,6 +31,6 @@ export default async function RoteirosPage({ searchParams }: PageProps) {
         <div className="flex gap-2"><button className="mk-primary-button">Filtrar</button><a href="/dashboard/roteiros" className="mk-secondary-button">Limpar</a></div>
       </form>
     </section>
-    <RoutesWorkspace days={data.days} options={data.options} weekStart={weekStart.toISOString()} weekEnd={weekEnd.toISOString()} />
+    <RoutesWorkspace days={data.days} options={data.options} weekStart={weekStart.toISOString()} weekEnd={weekEnd.toISOString()} operationId={params.operation} />
   </main>;
 }

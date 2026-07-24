@@ -186,6 +186,7 @@ export async function saveWeeklyRouteBatch(batch: WeeklyRouteBatch) {
     }, { isolationLevel: 'Serializable', timeout: 60_000 });
   } catch (error) {
     if (error instanceof ManualRouteError) throw error;
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2022') throw new ManualRouteError('ROUTE_SAVE_FAILED', 500, 'A atualização do banco de dados ainda não foi aplicada. A edição do roteiro não pode ser salva neste ambiente.');
     console.error('[routes:manual] unexpected error', { name: error instanceof Error ? error.name : 'UnknownError', message: error instanceof Error ? error.message : String(error) });
     throw new ManualRouteError('ROUTE_SAVE_FAILED', 500, 'Não foi possível salvar o roteiro semanal.');
   }

@@ -1,0 +1,9 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import { groupPromotersById, promoterDisplayName, promoterInitials, removePromoterPlanning } from './routes-workspace-model';
+const visit = (key: string, promoterId: string, status: 'PLANEJADA' | 'REALIZADA' = 'PLANEJADA') => ({ key, promoterId, storeId: 'store-1', industryIds: ['industry-1'], scheduledDate: '2026-07-20T12:00:00.000Z', status });
+test('exibe nome real e iniciais do promotor', () => { assert.equal(promoterDisplayName('Ana Letícia Ortiz'), 'Ana Letícia Ortiz'); assert.equal(promoterInitials('Ana Letícia Ortiz'), 'AL'); });
+test('promotor sem visitas continua no roster da operação', () => { const result = groupPromotersById([{ id: 'p-1', name: 'Ana', operationId: 'op-1' }], [], 'op-1'); assert.equal(result.length, 1); assert.equal(result[0].visits.length, 0); });
+test('agrupa por ID e nunca mistura homônimos', () => { const roster = [{ id: 'p-1', name: 'Ana', operationId: 'op-1' }, { id: 'p-2', name: 'Ana', operationId: 'op-1' }]; const result = groupPromotersById(roster, [visit('a', 'p-1'), visit('b', 'p-2')], 'op-1'); assert.equal(result.length, 2); assert.deepEqual(result.map((item) => item.visits.length), [1, 1]); });
+test('fallback identifica ausência sem usar card genérico', () => { assert.equal(promoterDisplayName(''), 'Promotor não identificado'); });
+test('remover promotor da semana preserva visitas realizadas', () => { const result = removePromoterPlanning([visit('a', 'p-1'), visit('b', 'p-1', 'REALIZADA')], 'p-1'); assert.equal(result.length, 1); assert.equal(result[0].status, 'REALIZADA'); });
