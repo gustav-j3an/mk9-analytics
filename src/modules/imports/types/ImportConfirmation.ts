@@ -11,7 +11,7 @@ export const ImportConfirmationPayloadSchema = z.object({
   month: z.number().int().min(1, 'Mês inválido.').max(12, 'Mês inválido.').optional().nullable(),
   year: z.number().int().min(2000, 'Ano inválido.').max(2100, 'Ano inválido.').optional().nullable(),
   spreadsheetType: z.string().min(1, 'Tipo de planilha inválido.').max(128, 'Tipo de planilha inválido.').optional().nullable(),
-  syncMode: z.enum(['FULL_SYNC', 'ADD_ONLY']),
+  syncMode: z.enum(['FULL_SYNC', 'ADD_ONLY']).optional().default('FULL_SYNC'),
 }).strict();
 
 export type ImportConfirmationPayload = z.infer<typeof ImportConfirmationPayloadSchema>;

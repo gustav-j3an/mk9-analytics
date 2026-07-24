@@ -92,17 +92,18 @@ export interface SyncAnalysisPreview {
 }
 
 export class RoteiroSyncService {
-  static async analyze(input: SyncAnalysisInput): Promise<SyncAnalysisPreview> {
+  static async analyze(input: SyncAnalysisInput, txClient?: Prisma.TransactionClient): Promise<SyncAnalysisPreview> {
     const { rows, auxiliary, month, year, syncMode } = input;
+    const client = txClient || prisma;
 
     // 1. Fetch DB entities
-    const dbPromoters = await prisma.promoter.findMany({ where: { deletedAt: null } });
-    const dbStores = await prisma.store.findMany({ where: { archivedAt: null } });
-    const dbIndustries = await prisma.industry.findMany({ where: { archivedAt: null } });
+    const dbPromoters = await client.promoter.findMany({ where: { deletedAt: null } });
+    const dbStores = await client.store.findMany({ where: { archivedAt: null } });
+    const dbIndustries = await client.industry.findMany({ where: { archivedAt: null } });
 
     // 2. Fetch existing visits for month/year (via default operation)
     const operationId = await getOrCreateDefaultOperationForPeriod(month, year);
-    const dbVisits = await prisma.visit.findMany({
+    const dbVisits = await client.visit.findMany({
       where: { operationId },
       include: { store: true, industry: true, promoter: true }
     });
@@ -245,7 +246,7 @@ export class RoteiroSyncService {
     // 5. Compare plannedVisits against dbVisits
     const dbVisitsMap = new Map<string, Visit & { store: any; industry: any; promoter: any }>();
     dbVisits.forEach(v => {
-      const key = `${normalizeStringForComparison(v.promoter.name)}:${normalizeStringForComparison(v.store.name)}:${normalizeStringForComparison(v.industry.name)}:${v.scheduledDate.toISOString().slice(0, 10)}`;
+      const key = `${v.promoterId}:${v.storeId}:${v.industryId}:${v.scheduledDate.toISOString().slice(0, 10)}`;
       dbVisitsMap.set(key, v as any);
     });
 
@@ -261,9 +262,6 @@ export class RoteiroSyncService {
     const matchedDbKeys = new Set<string>();
 
     for (const pv of plannedVisits) {
-      const key = `${normalizeStringForComparison(pv.promoterName)}:${normalizeStringForComparison(pv.storeName)}:${normalizeStringForComparison(pv.industryName)}:${pv.dateStr}`;
-      const dbMatch = dbVisitsMap.get(key);
-
       const promoterMap = promoterMappings[pv.promoterName];
       const storeMap = storeMappings[pv.storeName];
       const industryMap = industryMappings[pv.industryName];
@@ -285,21 +283,32 @@ export class RoteiroSyncService {
         status = 'AMBIGUO';
         action = 'IGNORE';
         details = 'Nome muito semelhante a um cadastro existente. Revisão recomendada.';
-      } else if (dbMatch) {
-        matchedDbKeys.add(key);
-        if (dbMatch.weeklyFrequency !== pv.weeklyFreq) {
-          status = 'ALTERADO';
-          action = 'UPDATE';
-          details = `Frequência semanal alterada de ${dbMatch.weeklyFrequency} para ${pv.weeklyFreq}.`;
-          routesUpdated++;
-        } else {
-          status = 'SEM_ALTERACAO';
-          action = 'KEEP';
-          details = 'Roteiro idêntico ao cadastrado no banco.';
-          routesKept++;
-        }
       } else {
-        routesNew++;
+        const promId = promoterMap?.dbId;
+        const storeId = storeMap?.dbId;
+        const indId = industryMap?.dbId;
+        const dbKey = `${promId}:${storeId}:${indId}:${pv.dateStr}`;
+        const dbMatch = dbVisitsMap.get(dbKey);
+
+        if (dbMatch) {
+          matchedDbKeys.add(dbKey);
+          if (dbMatch.weeklyFrequency !== pv.weeklyFreq) {
+            status = 'ALTERADO';
+            action = 'UPDATE';
+            details = `Frequência semanal alterada de ${dbMatch.weeklyFrequency} para ${pv.weeklyFreq}.`;
+            routesUpdated++;
+          } else {
+            status = 'SEM_ALTERACAO';
+            action = 'KEEP';
+            details = 'Roteiro idêntico ao cadastrado no banco.';
+            routesKept++;
+          }
+        } else {
+          status = 'NOVO';
+          action = 'CREATE';
+          details = 'Nova rota planejada.';
+          routesNew++;
+        }
       }
 
       // Check for promoter schedule conflict (same day, different store + industry)
@@ -307,8 +316,8 @@ export class RoteiroSyncService {
         other !== pv &&
         normalizeStringForComparison(other.promoterName) === normalizeStringForComparison(pv.promoterName) &&
         other.dateStr === pv.dateStr &&
-        normalizeStringForComparison(other.storeName) !== normalizeStringForComparison(pv.storeName) &&
-        normalizeStringForComparison(other.industryName) !== normalizeStringForComparison(pv.industryName)
+        (normalizeStringForComparison(other.storeName) !== normalizeStringForComparison(pv.storeName) ||
+         normalizeStringForComparison(other.industryName) !== normalizeStringForComparison(pv.industryName))
       );
 
       if (hasConflict) {
@@ -401,12 +410,15 @@ export class RoteiroSyncService {
   static async persist(
     input: SyncAnalysisInput,
     userId: string,
-    importId: string
+    importId: string,
+    txClient?: Prisma.TransactionClient
   ): Promise<any> {
-    const analysis = await this.analyze(input);
+    const run = async (tx: Prisma.TransactionClient) => {
+      console.info(`[RoteiroSyncService:persist] Starting persistence. syncMode=${input.syncMode}, month=${input.month}, year=${input.year}`);
+      
+      const analysis = await this.analyze(input, tx);
+      console.info(`[RoteiroSyncService:persist] Analysis complete. promotersNew=${analysis.promotersNew}, storesNew=${analysis.storesNew}, industriesNew=${analysis.industriesNew}`);
 
-    return await prisma.$transaction(async (tx) => {
-      // 1. Create technical default operation for month/year if needed
       const operationId = await getOrCreateDefaultOperationForPeriod(input.month, input.year);
 
       // Fetch default supervisor
@@ -463,6 +475,16 @@ export class RoteiroSyncService {
         }
       }
 
+      // Load existing visits in this period to perform memory-based deduplication and mapping
+      const existingVisits = await tx.visit.findMany({
+        where: { operationId },
+        select: { id: true, promoterId: true, storeId: true, industryId: true, scheduledDate: true }
+      });
+      
+      const existingVisitsSet = new Set(
+        existingVisits.map(v => `${v.promoterId}:${v.storeId}:${v.industryId}:${v.scheduledDate.toISOString().slice(0, 10)}`)
+      );
+
       // Perform updates/creations
       let createdVisits = 0;
       let updatedVisits = 0;
@@ -476,18 +498,39 @@ export class RoteiroSyncService {
 
           if (!promId || !storeId || !indId) continue;
 
-          await tx.visit.create({
-            data: {
-              operationId,
-              promoterId: promId,
-              storeId,
-              industryId: indId,
-              scheduledDate: new Date(`${item.date}T12:00:00.000Z`),
-              weeklyFrequency: 1,
-              status: 'PLANEJADA'
-            }
-          });
-          createdVisits++;
+          const key = `${promId}:${storeId}:${indId}:${item.date}`;
+          if (existingVisitsSet.has(key)) {
+            // Update instead of create
+            await tx.visit.updateMany({
+              where: {
+                operationId,
+                promoterId: promId,
+                storeId,
+                industryId: indId,
+                scheduledDate: new Date(`${item.date}T12:00:00.000Z`)
+              },
+              data: {
+                weeklyFrequency: 1,
+                status: 'PLANEJADA'
+              }
+            });
+            updatedVisits++;
+          } else {
+            // Create
+            await tx.visit.create({
+              data: {
+                operationId,
+                promoterId: promId,
+                storeId,
+                industryId: indId,
+                scheduledDate: new Date(`${item.date}T12:00:00.000Z`),
+                weeklyFrequency: 1,
+                status: 'PLANEJADA'
+              }
+            });
+            createdVisits++;
+            existingVisitsSet.add(key);
+          }
         } else if (item.action === 'UPDATE') {
           const promId = analysis.promoterMappings[item.promoter]?.dbId;
           const storeId = analysis.storeMappings[item.store]?.dbId;
@@ -509,13 +552,19 @@ export class RoteiroSyncService {
           });
           updatedVisits++;
         } else if (item.action === 'DELETE') {
+          const promId = analysis.promoterMappings[item.promoter]?.dbId;
+          const storeId = analysis.storeMappings[item.store]?.dbId;
+          const indId = analysis.industryMappings[item.industry]?.dbId;
+
+          if (!promId || !storeId || !indId) continue;
+
           // Hard delete PLANNED visits that are not realized
           const count = await tx.visit.deleteMany({
             where: {
               operationId,
-              promoter: { name: item.promoter },
-              store: { name: item.store },
-              industry: { name: item.industry },
+              promoterId: promId,
+              storeId,
+              industryId: indId,
               scheduledDate: new Date(`${item.date}T12:00:00.000Z`),
               status: 'PLANEJADA',
               completedAt: null
@@ -534,6 +583,8 @@ export class RoteiroSyncService {
         }
       });
 
+      console.info(`[RoteiroSyncService:persist] Finished successfully. createdVisits=${createdVisits}, updatedVisits=${updatedVisits}, deletedVisits=${deletedVisits}`);
+
       return {
         createdVisits,
         updatedVisits,
@@ -542,7 +593,17 @@ export class RoteiroSyncService {
         storesNew: analysis.storesNew,
         industriesNew: analysis.industriesNew
       };
-    });
+    };
+
+    if (txClient) {
+      return await run(txClient);
+    } else {
+      return await prisma.$transaction(async (tx) => {
+        return await run(tx);
+      }, {
+        timeout: 30000
+      });
+    }
   }
 }
 

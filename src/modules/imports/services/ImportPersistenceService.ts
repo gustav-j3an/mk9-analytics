@@ -72,7 +72,8 @@ export async function persistPreviewArtifact(
         syncMode,
       },
       'system',
-      artifact.importId
+      artifact.importId,
+      tx
     );
 
     await tx.importFile.upsert({
